@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import { GoogleGenAI } from '@google/genai';
-import { useState, useRef, useEffect, FormEvent, MouseEvent, ChangeEvent } from 'react';
+import { useState, useRef, useEffect, FormEvent, MouseEvent, ChangeEvent, ReactNode } from 'react';
 import ReactDOM from 'react-dom/client';
 // FIX: The error "Module '"firebase/app"' has no exported member 'initializeApp'" indicates
 // a Firebase version mismatch. The code uses v9 syntax, but the environment seems to have
@@ -112,6 +112,35 @@ const useAuth = () => {
   return { user, loading };
 };
 
+// --- Global Layout Component ---
+function Layout({ user, children }: { user: AppUser | null, children: ReactNode }) {
+  const handleSignOut = async () => {
+    await auth.signOut();
+    window.location.hash = '';
+  };
+
+  return (
+    <div className="app-layout">
+      <header className="global-header">
+        <h1><a href="#">Normie AI</a></h1>
+        {user && (
+          <nav className="global-nav">
+            <span className="user-display-name">Welcome, {user.displayName}</span>
+            <button className="sign-out-button" onClick={handleSignOut}>Sign Out</button>
+          </nav>
+        )}
+      </header>
+      <main className="main-content">
+        {children}
+      </main>
+      <footer className="global-footer">
+        <p>&copy; 2025 Normie AI. A cultural translation messenger.</p>
+      </footer>
+    </div>
+  );
+}
+
+
 // --- Main App Component (Router) ---
 function NormieAIApp() {
   const { user, loading } = useAuth();
@@ -125,19 +154,22 @@ function NormieAIApp() {
 
   const roomId = hash.startsWith('#/room/') ? hash.replace('#/room/', '') : null;
 
+  let pageContent;
   if (loading) {
-    return <div className="setup-container"><h1>Loading...</h1></div>;
+    pageContent = <div className="setup-container"><h1>Loading...</h1></div>;
+  } else if (roomId) {
+    pageContent = <ChatRoom roomId={roomId} currentUser={user} />;
+  } else if (user) {
+    pageContent = <Dashboard user={user} />;
+  } else {
+    pageContent = <LoginScreen />;
   }
 
-  if (roomId) {
-    return <ChatRoom roomId={roomId} currentUser={user} />;
-  }
-
-  if (user) {
-    return <Dashboard user={user} />;
-  }
-
-  return <LoginScreen />;
+  return (
+    <Layout user={user}>
+      {pageContent}
+    </Layout>
+  );
 }
 
 // --- Login Screen ---
@@ -213,21 +245,8 @@ function Dashboard({ user }: { user: AppUser }) {
       }
   };
 
-  const handleSignOut = async () => {
-    // FIX: Use Firebase v8 signOut method.
-    await auth.signOut();
-    window.location.hash = '';
-  }
-
   return (
     <div className="dashboard-container">
-       <header className="chat-header">
-        <h1>Dashboard</h1>
-        <div>
-          <span className="user-display-name">Welcome, {user.displayName}</span>
-          <button className="sign-out-button" onClick={handleSignOut}>Sign Out</button>
-        </div>
-      </header>
        <div className="dashboard-content">
             <aside className="settings-panel">
                 <h2>My Settings</h2>
@@ -539,12 +558,12 @@ function ChatRoom({ roomId, currentUser }: { roomId: string, currentUser: AppUse
   const effectiveSenderId = currentUser ? currentUser.uid : guestId;
 
   return (
-    <div className="chat-container" aria-live="polite">
-      <header className="chat-header">
-        <h1>{room.name}</h1>
+    <div className="chat-container">
+      <header className="room-header">
+        <h2>{room.name}</h2>
         <button className="copy-link-button" onClick={copyLink}>{linkCopied ? 'Copied!' : 'Copy Invite Link'}</button>
       </header>
-      <main className="message-list" ref={messageListRef}>
+      <div className="message-list" ref={messageListRef}>
         {messages.map((msg) => {
             const isSender = effectiveSenderId === msg.senderId;
             const receivedTranslation = msg.translations[currentUser?.uid || ''];
@@ -575,7 +594,7 @@ function ChatRoom({ roomId, currentUser }: { roomId: string, currentUser: AppUse
                 </div>
             )
         })}
-      </main>
+      </div>
       <form className="message-form" onSubmit={handleSendMessage}>
         <input
           type="text"
