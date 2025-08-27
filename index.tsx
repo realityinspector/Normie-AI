@@ -62,7 +62,7 @@ function CreateRoom() {
   const [user2Type, setUser2Type] = useState<UserType>('Autistic');
 
   const handleCreateRoom = () => {
-    const roomId = crypto.randomUUID();
+    const roomId = 'room-' + Date.now().toString(36) + Math.random().toString(36).substring(2);
     const settings: RoomSettings = { user1Type, user2Type };
     localStorage.setItem(`normie-ai-room-${roomId}`, JSON.stringify(settings));
     window.location.hash = roomId;
