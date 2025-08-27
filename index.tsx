@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import { GoogleGenAI } from '@google/genai';
-import { useState, useRef, useEffect, FormEvent } from 'react';
+import { useState, useRef, useEffect, FormEvent, MouseEvent } from 'react';
 import ReactDOM from 'react-dom/client';
 
 // --- Data Structures ---
@@ -189,8 +189,13 @@ function ChatRoom({ roomId }: { roomId: string }) {
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
+  const handleCreateNewRoom = (e: MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    window.location.hash = '';
+  };
+
   if (!settings) {
-    return <div className="setup-container"><h1>Room not found</h1><p>This chat room does not exist. <a href="/">Create a new one.</a></p></div>;
+    return <div className="setup-container"><h1>Room not found</h1><p>This chat room does not exist. <a href="#" onClick={handleCreateNewRoom}>Create a new one.</a></p></div>;
   }
 
   if (!currentUser) {
