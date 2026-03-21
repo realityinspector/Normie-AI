@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" width="800" height="200">
+  <defs>
+    <linearGradient id="aiGradD" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818CF8"/>
+      <stop offset="100%" style="stop-color:#A78BFA"/>
+    </linearGradient>
+    <linearGradient id="brainGradD" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818CF8"/>
+      <stop offset="50%" style="stop-color:#A78BFA"/>
+      <stop offset="100%" style="stop-color:#C4B5FD"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Brain icon -->
+  <g transform="translate(30, 28) scale(0.85)">
+    <path d="M85 20 C50 20, 20 50, 20 85 C20 110, 30 130, 50 145 L50 160 C50 165, 54 170, 60 170 L90 170 C96 170, 100 165, 100 160 L100 145 C120 130, 135 110, 135 85 C135 50, 105 20, 85 20Z"
+          fill="none" stroke="url(#brainGradD)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M55 65 C65 55, 85 55, 78 70 C72 82, 58 78, 55 65Z" fill="none" stroke="url(#brainGradD)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M80 58 C90 50, 110 55, 105 68 C100 80, 85 78, 80 65Z" fill="none" stroke="url(#brainGradD)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M50 85 C60 78, 78 82, 75 95 C72 105, 55 100, 50 85Z" fill="none" stroke="url(#brainGradD)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M78 82 C88 75, 108 80, 105 95 C102 108, 82 102, 78 90Z" fill="none" stroke="url(#brainGradD)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M78 45 L78 130" fill="none" stroke="url(#brainGradD)" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+    <circle cx="65" cy="70" r="3" fill="#A78BFA"/>
+    <circle cx="95" cy="65" r="3" fill="#818CF8"/>
+    <circle cx="60" cy="95" r="3" fill="#C4B5FD"/>
+    <circle cx="98" cy="92" r="3" fill="#A78BFA"/>
+  </g>
+
+  <text x="175" y="130" font-family="SF Pro Display, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="80" font-weight="800" letter-spacing="-2" fill="#F1F0FF">NORMAL</text>
+  <text x="530" y="130" font-family="SF Pro Display, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="80" font-weight="800" letter-spacing="-2" fill="url(#aiGradD)">AI</text>
+  <text x="610" y="130" font-family="SF Pro Display, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="80" font-weight="800" letter-spacing="-2" fill="#F1F0FF">ZER</text>
+</svg>

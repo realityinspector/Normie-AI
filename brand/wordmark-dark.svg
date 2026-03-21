@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 80" width="600" height="80">
+  <defs>
+    <linearGradient id="wmAiGradD" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818CF8"/>
+      <stop offset="100%" style="stop-color:#A78BFA"/>
+    </linearGradient>
+  </defs>
+  <text x="0" y="62" font-family="SF Pro Display, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="64" font-weight="800" letter-spacing="-1.5" fill="#F1F0FF">NORMAL</text>
+  <text x="310" y="62" font-family="SF Pro Display, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="64" font-weight="800" letter-spacing="-1.5" fill="url(#wmAiGradD)">AI</text>
+  <text x="374" y="62" font-family="SF Pro Display, -apple-system, Helvetica Neue, Arial, sans-serif" font-size="64" font-weight="800" letter-spacing="-1.5" fill="#F1F0FF">ZER</text>
+</svg>

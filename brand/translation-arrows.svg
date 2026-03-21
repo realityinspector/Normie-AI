@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <defs>
+    <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6366F1"/>
+      <stop offset="100%" style="stop-color:#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="arrowGradRev" x1="100%" y1="0%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#6366F1"/>
+      <stop offset="100%" style="stop-color:#8B5CF6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Left bubble - Autist -->
+  <rect x="10" y="15" width="120" height="40" rx="20" ry="20" fill="#EEF2FF" stroke="#6366F1" stroke-width="2"/>
+  <text x="70" y="41" text-anchor="middle" font-family="SF Pro Display, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#4338CA">Autist</text>
+
+  <!-- Right bubble - Normie -->
+  <rect x="270" y="15" width="120" height="40" rx="20" ry="20" fill="#EEF2FF" stroke="#8B5CF6" stroke-width="2"/>
+  <text x="330" y="41" text-anchor="middle" font-family="SF Pro Display, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#6D28D9">Normie</text>
+
+  <!-- Forward arrow -->
+  <line x1="145" y1="28" x2="255" y2="28" stroke="url(#arrowGrad)" stroke-width="2.5" stroke-linecap="round"/>
+  <polygon points="255,22 268,28 255,34" fill="#8B5CF6"/>
+
+  <!-- Reverse arrow -->
+  <line x1="255" y1="42" x2="145" y2="42" stroke="url(#arrowGradRev)" stroke-width="2.5" stroke-linecap="round"/>
+  <polygon points="145,36 132,42 145,48" fill="#6366F1"/>
+
+  <!-- AI badge in center -->
+  <rect x="178" y="55" width="44" height="28" rx="14" ry="14" fill="url(#arrowGrad)"/>
+  <text x="200" y="74" text-anchor="middle" font-family="SF Pro Display, -apple-system, sans-serif" font-size="14" font-weight="800" fill="white">AI</text>
+
+  <!-- Tagline -->
+  <text x="200" y="105" text-anchor="middle" font-family="SF Pro Display, -apple-system, sans-serif" font-size="13" font-weight="500" fill="#6B7280">Cultural Communication Translation</text>
+</svg>
