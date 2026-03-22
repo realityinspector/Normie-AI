@@ -37,7 +37,8 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """Receive and process Stripe webhook events.
 
     Verifies the webhook signature, then dispatches to the appropriate handler
-    based on the event type.
+    based on the event type. Always returns 200 for valid events to prevent
+    Stripe retry loops, even if handler processing fails.
     """
     settings = get_settings()
     payload = await request.body()
@@ -53,7 +54,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     except ValueError:
         logger.warning("Invalid Stripe webhook payload")
         raise HTTPException(status_code=400, detail="Invalid payload")
-    except stripe.error.SignatureVerificationError:
+    except stripe.SignatureVerificationError:
         logger.warning("Invalid Stripe webhook signature")
         raise HTTPException(status_code=400, detail="Invalid signature")
 
@@ -62,45 +63,56 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 
     logger.info("Received Stripe event: %s (id=%s)", event_type, event.get("id"))
 
-    if event_type == "checkout.session.completed":
-        customer_id = data_object.get("customer")
-        if not customer_id:
-            # Try metadata fallback
-            logger.warning("checkout.session.completed without customer ID")
-            return {"status": "ignored"}
+    try:
+        if event_type == "checkout.session.completed":
+            customer_id = data_object.get("customer")
+            if not customer_id:
+                logger.warning("checkout.session.completed without customer ID")
+                return {"status": "ignored"}
 
-        user = await _get_user_by_stripe_customer(customer_id, db)
-        if not user:
-            logger.warning("No user found for Stripe customer %s", customer_id)
-            return {"status": "ignored"}
+            user = await _get_user_by_stripe_customer(customer_id, db)
+            if not user:
+                logger.warning("No user found for Stripe customer %s", customer_id)
+                return {"status": "ignored"}
 
-        handle_checkout_completed(data_object, user)
+            await handle_checkout_completed(data_object, user, db)
 
-    elif event_type == "customer.subscription.updated":
-        customer_id = data_object.get("customer")
-        if not customer_id:
-            return {"status": "ignored"}
+        elif event_type == "customer.subscription.updated":
+            customer_id = data_object.get("customer")
+            if not customer_id:
+                return {"status": "ignored"}
 
-        user = await _get_user_by_stripe_customer(customer_id, db)
-        if not user:
-            logger.warning("No user found for Stripe customer %s", customer_id)
-            return {"status": "ignored"}
+            user = await _get_user_by_stripe_customer(customer_id, db)
+            if not user:
+                logger.warning("No user found for Stripe customer %s", customer_id)
+                return {"status": "ignored"}
 
-        handle_subscription_updated(data_object, user)
+            await handle_subscription_updated(data_object, user, db)
 
-    elif event_type == "customer.subscription.deleted":
-        customer_id = data_object.get("customer")
-        if not customer_id:
-            return {"status": "ignored"}
+        elif event_type == "customer.subscription.deleted":
+            customer_id = data_object.get("customer")
+            if not customer_id:
+                return {"status": "ignored"}
 
-        user = await _get_user_by_stripe_customer(customer_id, db)
-        if not user:
-            logger.warning("No user found for Stripe customer %s", customer_id)
-            return {"status": "ignored"}
+            user = await _get_user_by_stripe_customer(customer_id, db)
+            if not user:
+                logger.warning("No user found for Stripe customer %s", customer_id)
+                return {"status": "ignored"}
 
-        handle_subscription_deleted(data_object, user)
+            await handle_subscription_deleted(data_object, user, db)
 
-    else:
-        logger.debug("Unhandled Stripe event type: %s", event_type)
+        else:
+            logger.debug("Unhandled Stripe event type: %s", event_type)
+
+    except Exception:
+        # Log the error but return 200 to prevent Stripe retry loops.
+        # The error is already logged by the service layer; add context here.
+        logger.exception(
+            "Error processing Stripe event %s (id=%s). "
+            "Returning 200 to prevent retry loop.",
+            event_type,
+            event.get("id"),
+        )
+        return {"status": "error", "message": "Handler failed but acknowledged"}
 
     return {"status": "ok"}

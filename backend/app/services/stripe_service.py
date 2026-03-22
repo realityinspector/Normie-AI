@@ -65,58 +65,113 @@ async def create_customer_portal_session(user: User) -> stripe.billing_portal.Se
     return session
 
 
-def handle_checkout_completed(session: dict, user: User) -> None:
+async def handle_checkout_completed(
+    session: dict, user: User, db: AsyncSession
+) -> None:
     """Activate subscription after successful checkout.
 
     Called when a checkout.session.completed event is received.
+    Commits the transaction atomically; rolls back on failure.
     """
-    user.subscription_active = True
-    # Store the Stripe customer ID if not already set
-    customer_id = session.get("customer")
-    if customer_id and not user.stripe_customer_id:
-        user.stripe_customer_id = customer_id
+    old_active = user.subscription_active
+    old_customer_id = user.stripe_customer_id
 
-    logger.info(
-        "Subscription activated for user %s via checkout session %s",
-        user.id,
-        session.get("id"),
-    )
+    try:
+        user.subscription_active = True
+        # Store the Stripe customer ID if not already set
+        customer_id = session.get("customer")
+        if customer_id and not user.stripe_customer_id:
+            user.stripe_customer_id = customer_id
+
+        await db.commit()
+
+        logger.info(
+            "Subscription activated for user %s via checkout session %s "
+            "(subscription_active: %s -> True, stripe_customer_id: %s -> %s)",
+            user.id,
+            session.get("id"),
+            old_active,
+            old_customer_id,
+            user.stripe_customer_id,
+        )
+    except Exception:
+        await db.rollback()
+        logger.exception(
+            "Failed to commit checkout completion for user %s", user.id
+        )
+        raise
 
 
-def handle_subscription_updated(subscription: dict, user: User) -> None:
+async def handle_subscription_updated(
+    subscription: dict, user: User, db: AsyncSession
+) -> None:
     """Update subscription status when Stripe sends an update.
 
     Called when a customer.subscription.updated event is received.
+    Commits the transaction atomically; rolls back on failure.
     """
+    old_active = user.subscription_active
+    old_expires = getattr(user, "subscription_expires_at", None)
     status = subscription.get("status")
-    if status in ("active", "trialing"):
-        user.subscription_active = True
-        # Update expiry from current_period_end
-        period_end = subscription.get("current_period_end")
-        if period_end:
-            user.subscription_expires_at = datetime.fromtimestamp(
-                period_end, tz=timezone.utc
-            )
-    else:
-        # past_due, canceled, unpaid, incomplete, incomplete_expired, paused
-        user.subscription_active = False
 
-    logger.info(
-        "Subscription updated for user %s: status=%s",
-        user.id,
-        status,
-    )
+    try:
+        if status in ("active", "trialing"):
+            user.subscription_active = True
+            # Update expiry from current_period_end
+            period_end = subscription.get("current_period_end")
+            if period_end:
+                user.subscription_expires_at = datetime.fromtimestamp(
+                    period_end, tz=timezone.utc
+                )
+        else:
+            # past_due, canceled, unpaid, incomplete, incomplete_expired, paused
+            user.subscription_active = False
+
+        await db.commit()
+
+        logger.info(
+            "Subscription updated for user %s: status=%s "
+            "(subscription_active: %s -> %s, expires_at: %s -> %s)",
+            user.id,
+            status,
+            old_active,
+            user.subscription_active,
+            old_expires,
+            getattr(user, "subscription_expires_at", None),
+        )
+    except Exception:
+        await db.rollback()
+        logger.exception(
+            "Failed to commit subscription update for user %s", user.id
+        )
+        raise
 
 
-def handle_subscription_deleted(subscription: dict, user: User) -> None:
+async def handle_subscription_deleted(
+    subscription: dict, user: User, db: AsyncSession
+) -> None:
     """Deactivate subscription when it is canceled/deleted.
 
     Called when a customer.subscription.deleted event is received.
+    Commits the transaction atomically; rolls back on failure.
     """
-    user.subscription_active = False
+    old_active = user.subscription_active
 
-    logger.info(
-        "Subscription deleted for user %s (subscription %s)",
-        user.id,
-        subscription.get("id"),
-    )
+    try:
+        user.subscription_active = False
+
+        await db.commit()
+
+        logger.info(
+            "Subscription deleted for user %s (subscription %s, "
+            "subscription_active: %s -> False)",
+            user.id,
+            subscription.get("id"),
+            old_active,
+        )
+    except Exception:
+        await db.rollback()
+        logger.exception(
+            "Failed to commit subscription deletion for user %s", user.id
+        )
+        raise

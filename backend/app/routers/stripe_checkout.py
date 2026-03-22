@@ -2,6 +2,7 @@
 
 import logging
 
+import stripe
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,11 +35,25 @@ async def create_checkout(
     The frontend redirects the user to the returned URL to complete payment
     on Stripe's hosted checkout page.
     """
+    if not body.price_id or not body.price_id.strip():
+        raise HTTPException(status_code=400, detail="Invalid subscription plan")
+
+    if user.subscription_active:
+        raise HTTPException(
+            status_code=400, detail="You already have an active subscription"
+        )
+
     try:
         session = await create_checkout_session(user, body.price_id, db)
         return {"url": session.url}
+    except stripe.StripeError as exc:
+        logger.error("Stripe API error creating checkout session: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="Payment service temporarily unavailable",
+        )
     except Exception as exc:
-        logger.error("Failed to create checkout session: %s", exc)
+        logger.error("Unexpected error creating checkout session: %s", exc)
         raise HTTPException(
             status_code=500,
             detail="Could not create checkout session. Please try again.",
