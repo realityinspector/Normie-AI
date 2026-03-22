@@ -1,0 +1,60 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: CI Checks
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Deploy to Railway
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: |
+          curl -fsSL https://railway.com/install.sh | sh
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          cd backend
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "Deploying to PRODUCTION..."
+            railway up --service normalizer-api --environment production --detach
+          else
+            echo "Deploying to DEVELOPMENT..."
+            railway up --service normalizer-api --environment development --detach
+          fi
+
+      - name: Wait for deployment health
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            URL="https://normalizer-api-production.up.railway.app"
+          else
+            URL="https://normalizer-api-dev.up.railway.app"
+          fi
+          echo "Waiting for $URL/health..."
+          for i in $(seq 1 30); do
+            if curl -sf "$URL/health" > /dev/null 2>&1; then
+              echo "Deployment healthy!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - waiting 10s..."
+            sleep 10
+          done
+          echo "::warning::Health check timed out after 5 minutes"
+          exit 1
