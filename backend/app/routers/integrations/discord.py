@@ -42,9 +42,7 @@ modals) to a single Interactions Endpoint URL via HTTP POST.
 - Type 5: MODAL_SUBMIT
 """
 
-from fastapi import APIRouter, Request
-
-from fastapi import HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 router = APIRouter(prefix="/discord", tags=["integrations-discord"])
 

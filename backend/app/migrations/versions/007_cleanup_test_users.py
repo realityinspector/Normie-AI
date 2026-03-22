@@ -1,6 +1,5 @@
 """Clean up test users from production database."""
 from alembic import op
-import sqlalchemy as sa
 
 revision = "007"
 down_revision = "006"

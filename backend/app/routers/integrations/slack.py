@@ -44,9 +44,7 @@ with your app's Signing Secret.
 - **Verification:** Same HMAC-SHA256 mechanism as webhooks.
 """
 
-from fastapi import APIRouter, Request
-
-from fastapi import HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 router = APIRouter(prefix="/slack", tags=["integrations-slack"])
 

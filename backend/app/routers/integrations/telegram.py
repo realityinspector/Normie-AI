@@ -45,9 +45,7 @@ When using webhooks, Telegram sends JSON POST requests to your endpoint.
 - `/help` — Usage instructions
 """
 
-from fastapi import APIRouter, Request
-
-from fastapi import HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 router = APIRouter(prefix="/telegram", tags=["integrations-telegram"])
 
