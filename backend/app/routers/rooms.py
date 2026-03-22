@@ -48,6 +48,29 @@ async def list_rooms(
     return [_room_to_read(r) for r in rooms]
 
 
+@router.get("/public", response_model=list[RoomRead])
+async def list_public_rooms(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List public rooms that the current user has NOT yet joined."""
+    # Subquery: room IDs the user is already a participant of
+    user_room_ids = (
+        select(RoomParticipant.room_id)
+        .where(RoomParticipant.user_id == user.id)
+        .scalar_subquery()
+    )
+    result = await db.execute(
+        select(Room)
+        .where(Room.is_public == True, Room.id.notin_(user_room_ids))  # noqa: E712
+        .options(selectinload(Room.participants).selectinload(RoomParticipant.user))
+        .order_by(Room.created_at.desc())
+        .limit(50)
+    )
+    rooms = result.scalars().unique().all()
+    return [_room_to_read(r) for r in rooms]
+
+
 @router.post("", response_model=RoomRead, status_code=status.HTTP_201_CREATED)
 async def create_room(
     body: RoomCreate,

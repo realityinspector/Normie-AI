@@ -41,6 +41,20 @@ function chatApp(token, userId, displayName, initialRoomId) {
     newRoomPublic: false,
     creatingRoom: false,
 
+    // Browse public rooms
+    showBrowseRooms: false,
+    publicRooms: [],
+    loadingPublicRooms: false,
+    joiningRoomId: null,
+
+    // Room sidebar tab: 'my' or 'browse'
+    roomTab: 'my',
+
+    // Invite link
+    showInviteModal: false,
+    inviteLink: '',
+    inviteCopied: false,
+
     // Share
     showShareModal: false,
     shareLink: '',
@@ -358,6 +372,98 @@ function chatApp(token, userId, displayName, initialRoomId) {
         console.error(e);
       } finally {
         this.creatingRoom = false;
+      }
+    },
+
+    // ─── Browse Public Rooms ───
+
+    async fetchPublicRooms() {
+      this.loadingPublicRooms = true;
+      try {
+        const res = await fetch('/rooms/public', {
+          headers: { 'Authorization': 'Bearer ' + this.token },
+        });
+        if (!res.ok) throw new Error('Failed to load public rooms');
+        const data = await res.json();
+        this.publicRooms = data.map(r => ({
+          id: r.id,
+          name: r.name,
+          is_public: r.is_public,
+          owner_id: r.owner_id,
+          participant_count: r.participants ? r.participants.length : 0,
+        }));
+      } catch (e) {
+        this.showError('Could not load public rooms');
+        console.error(e);
+      } finally {
+        this.loadingPublicRooms = false;
+      }
+    },
+
+    async switchTab(tab) {
+      this.roomTab = tab;
+      if (tab === 'browse') {
+        await this.fetchPublicRooms();
+      }
+    },
+
+    async joinRoom(room) {
+      if (this.joiningRoomId) return;
+      this.joiningRoomId = room.id;
+      try {
+        const res = await fetch('/rooms/' + room.id + '/join', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + this.token },
+        });
+        if (!res.ok) throw new Error('Failed to join room');
+        const joined = await res.json();
+        const mapped = {
+          id: joined.id,
+          name: joined.name,
+          is_public: joined.is_public,
+          owner_id: joined.owner_id,
+          participant_count: joined.participants ? joined.participants.length : 0,
+        };
+        // Add to my rooms list if not already there
+        if (!this.rooms.find(r => r.id === mapped.id)) {
+          this.rooms.unshift(mapped);
+        }
+        // Remove from public list
+        this.publicRooms = this.publicRooms.filter(r => r.id !== room.id);
+        // Switch to my rooms tab and select the room
+        this.roomTab = 'my';
+        this.selectRoom(mapped);
+      } catch (e) {
+        this.showError('Could not join room');
+        console.error(e);
+      } finally {
+        this.joiningRoomId = null;
+      }
+    },
+
+    // ─── Invite Link ───
+
+    showRoomInvite() {
+      if (!this.currentRoomId) return;
+      this.inviteLink = window.location.origin + '/r/' + this.currentRoomId + '/invite';
+      this.inviteCopied = false;
+      this.showInviteModal = true;
+    },
+
+    async copyInviteLink() {
+      try {
+        await navigator.clipboard.writeText(this.inviteLink);
+        this.inviteCopied = true;
+        setTimeout(() => { this.inviteCopied = false; }, 2000);
+      } catch {
+        const input = document.createElement('input');
+        input.value = this.inviteLink;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        this.inviteCopied = true;
+        setTimeout(() => { this.inviteCopied = false; }, 2000);
       }
     },
 
