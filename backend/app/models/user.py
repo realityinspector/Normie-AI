@@ -31,7 +31,9 @@ class User(Base):
     )
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     display_name: Mapped[str] = mapped_column(String(255), default="User")
-    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    email: Mapped[str | None] = mapped_column(
+        String(255), unique=True, index=True, nullable=True
+    )
     communication_style: Mapped[CommunicationStyle] = mapped_column(
         SAEnum(CommunicationStyle), default=CommunicationStyle.neurotypical
     )

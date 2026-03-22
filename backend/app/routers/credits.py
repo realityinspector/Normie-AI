@@ -133,7 +133,13 @@ async def redeem_referral(
             status_code=400, detail="You cannot redeem your own referral code"
         )
 
-    if user.referred_by is not None:
+    # Lock the user row to prevent concurrent referral redemption
+    result = await db.execute(
+        select(User).where(User.id == user.id).with_for_update()
+    )
+    locked_user = result.scalar_one()
+
+    if locked_user.referred_by is not None:
         raise HTTPException(
             status_code=400, detail="You have already used a referral code"
         )
@@ -145,9 +151,9 @@ async def redeem_referral(
         raise HTTPException(status_code=404, detail="Invalid referral code")
 
     # Mark this user as referred
-    user.referred_by = referrer.id
+    locked_user.referred_by = referrer.id
 
     # Give the referrer 1 free month
     _extend_subscription(referrer, 1)
 
-    return CreditBalanceRead(balance=user.credit_balance)
+    return CreditBalanceRead(balance=locked_user.credit_balance)

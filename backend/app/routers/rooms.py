@@ -1,6 +1,7 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.database import get_db
@@ -155,7 +156,11 @@ async def join_room(
     participant_ids = [rp.user_id for rp in room.participants]
     if user.id not in participant_ids:
         db.add(RoomParticipant(room_id=room.id, user_id=user.id))
-        await db.flush()
+        try:
+            await db.flush()
+        except IntegrityError:
+            # User already joined concurrently — idempotent, just reload
+            await db.rollback()
 
         # Reload
         result = await db.execute(

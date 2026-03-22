@@ -41,7 +41,9 @@ async def check_and_deduct(
 
     Raises HTTPException 402 if insufficient credits.
     """
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(
+        select(User).where(User.id == user_id).with_for_update()
+    )
     user = result.scalar_one()
 
     if user.credit_balance < amount:

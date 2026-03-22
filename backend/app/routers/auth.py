@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 import bcrypt
 import jwt
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_db
@@ -108,7 +109,14 @@ async def signup(
         credit_balance=settings.initial_credits,
     )
     db.add(user)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists",
+        )
 
     token, expires_in = _create_token(str(user.id))
     _set_session_cookie(response, token, expires_in)
@@ -179,7 +187,20 @@ async def apple_sign_in(
             credit_balance=settings.initial_credits,
         )
         db.add(user)
-        await db.flush()
+        try:
+            await db.flush()
+        except IntegrityError:
+            await db.rollback()
+            # apple_sub collision — another request created this user concurrently
+            result = await db.execute(
+                select(User).where(User.apple_sub == apple_sub)
+            )
+            user = result.scalar_one_or_none()
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="An account with this email already exists",
+                )
 
     token, expires_in = _create_token(str(user.id))
     return TokenResponse(access_token=token, expires_in=expires_in)
@@ -254,7 +275,20 @@ async def google_sign_in(
             )
             db.add(user)
 
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        # google_sub or email collision — another request created this user concurrently
+        result = await db.execute(
+            select(User).where(User.google_sub == google_sub)
+        )
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An account with this email already exists",
+            )
 
     token, expires_in = _create_token(str(user.id))
     _set_session_cookie(response, token, expires_in)

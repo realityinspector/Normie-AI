@@ -11,7 +11,7 @@ from app.models.user import User, CommunicationStyle
 from app.models.room import Room, RoomParticipant
 from app.models.message import Message
 from app.services.claude_translate import translate_text
-from app.services.credit_manager import check_access, check_and_deduct
+from app.services.credit_manager import check_and_deduct
 from app.services.connection_manager import manager
 
 router = APIRouter()
@@ -93,25 +93,29 @@ async def chat_websocket(
 
                 async with async_session() as db:
                     try:
-                        # Check subscription / free access / credits
+                        # Atomically check access and deduct credits in one step
                         user_result2 = await db.execute(
                             select(User).where(User.id == user_id)
                         )
                         current_user = user_result2.scalar_one()
-                        await check_access(db, current_user)
 
-                        # Deduct 1 credit for users without subscription or neurodivergent access
+                        # Neurodivergent users: always free
+                        is_neurodivergent = (
+                            current_user.communication_style
+                            == CommunicationStyle.autistic
+                        )
+                        # Active subscription: unlimited access
                         has_subscription = (
                             current_user.subscription_active
                             and current_user.subscription_expires_at is not None
                             and current_user.subscription_expires_at
                             > datetime.now(timezone.utc)
                         )
-                        is_neurodivergent = (
-                            current_user.communication_style
-                            == CommunicationStyle.autistic
-                        )
-                        if not has_subscription and not is_neurodivergent:
+
+                        if not is_neurodivergent and not has_subscription:
+                            # Atomic check-and-deduct: no separate check_access
+                            # This prevents the race between checking balance
+                            # and deducting credits
                             await check_and_deduct(
                                 db,
                                 current_user.id,
