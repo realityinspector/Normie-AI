@@ -5,6 +5,7 @@ Revises: 004
 Create Date: 2026-03-21
 
 """
+
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
@@ -23,9 +24,7 @@ def upgrade() -> None:
     op.create_unique_constraint(
         "uq_users_stripe_customer_id", "users", ["stripe_customer_id"]
     )
-    op.create_index(
-        "ix_users_stripe_customer_id", "users", ["stripe_customer_id"]
-    )
+    op.create_index("ix_users_stripe_customer_id", "users", ["stripe_customer_id"])
 
 
 def downgrade() -> None:

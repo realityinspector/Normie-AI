@@ -49,7 +49,9 @@ async def list_api_keys(
 ):
     """List all API keys for the authenticated user (keys are masked)."""
     result = await db.execute(
-        select(ApiKey).where(ApiKey.user_id == user.id).order_by(ApiKey.created_at.desc())
+        select(ApiKey)
+        .where(ApiKey.user_id == user.id)
+        .order_by(ApiKey.created_at.desc())
     )
     keys = result.scalars().all()
     return [
@@ -67,7 +69,9 @@ async def list_api_keys(
     ]
 
 
-@router.delete("/keys/{key_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["api-keys"])
+@router.delete(
+    "/keys/{key_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["api-keys"]
+)
 async def revoke_api_key(
     key_id: uuid.UUID,
     user: User = Depends(get_current_user),
@@ -93,7 +97,9 @@ async def revoke_api_key(
 # ── Developer API endpoints (API-key-authenticated) ──────────────────
 
 
-def _direction_to_styles(direction: str) -> tuple[CommunicationStyle, CommunicationStyle]:
+def _direction_to_styles(
+    direction: str,
+) -> tuple[CommunicationStyle, CommunicationStyle]:
     """Convert direction string to sender/recipient communication styles."""
     try:
         dir_enum = TranslationDirection(direction)
@@ -134,7 +140,9 @@ async def api_usage(
 ):
     """Get usage statistics for all API keys owned by the authenticated user."""
     result = await db.execute(
-        select(ApiKey).where(ApiKey.user_id == user.id).order_by(ApiKey.created_at.desc())
+        select(ApiKey)
+        .where(ApiKey.user_id == user.id)
+        .order_by(ApiKey.created_at.desc())
     )
     keys = result.scalars().all()
     return [

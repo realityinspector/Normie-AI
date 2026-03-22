@@ -5,6 +5,7 @@ Revises: 001
 Create Date: 2026-03-18
 
 """
+
 import string
 import secrets
 from typing import Sequence, Union
@@ -26,7 +27,9 @@ def upgrade() -> None:
     # Add subscription_active column
     op.add_column(
         "users",
-        sa.Column("subscription_active", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column(
+            "subscription_active", sa.Boolean(), nullable=False, server_default="false"
+        ),
     )
 
     # Add subscription_expires_at column

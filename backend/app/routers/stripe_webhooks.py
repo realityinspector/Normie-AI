@@ -71,9 +71,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 
         user = await _get_user_by_stripe_customer(customer_id, db)
         if not user:
-            logger.warning(
-                "No user found for Stripe customer %s", customer_id
-            )
+            logger.warning("No user found for Stripe customer %s", customer_id)
             return {"status": "ignored"}
 
         handle_checkout_completed(data_object, user)
@@ -85,9 +83,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 
         user = await _get_user_by_stripe_customer(customer_id, db)
         if not user:
-            logger.warning(
-                "No user found for Stripe customer %s", customer_id
-            )
+            logger.warning("No user found for Stripe customer %s", customer_id)
             return {"status": "ignored"}
 
         handle_subscription_updated(data_object, user)
@@ -99,9 +95,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 
         user = await _get_user_by_stripe_customer(customer_id, db)
         if not user:
-            logger.warning(
-                "No user found for Stripe customer %s", customer_id
-            )
+            logger.warning("No user found for Stripe customer %s", customer_id)
             return {"status": "ignored"}
 
         handle_subscription_deleted(data_object, user)

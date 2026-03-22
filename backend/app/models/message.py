@@ -9,7 +9,9 @@ class Message(Base):
     __tablename__ = "messages"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    room_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("rooms.id", ondelete="CASCADE"), index=True)
+    room_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("rooms.id", ondelete="CASCADE"), index=True
+    )
     sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     original_text: Mapped[str] = mapped_column(String)
     # {recipient_user_id: translated_text}

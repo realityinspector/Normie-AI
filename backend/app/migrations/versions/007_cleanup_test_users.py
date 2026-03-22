@@ -1,4 +1,5 @@
 """Clean up test users from production database."""
+
 from alembic import op
 
 revision = "007"

@@ -9,7 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.models.user import User
-from app.services.stripe_service import create_checkout_session, create_customer_portal_session
+from app.services.stripe_service import (
+    create_checkout_session,
+    create_customer_portal_session,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +39,10 @@ async def create_checkout(
         return {"url": session.url}
     except Exception as exc:
         logger.error("Failed to create checkout session: %s", exc)
-        raise HTTPException(status_code=500, detail="Could not create checkout session. Please try again.")
+        raise HTTPException(
+            status_code=500,
+            detail="Could not create checkout session. Please try again.",
+        )
 
 
 @router.post("/create-portal-session")
@@ -58,4 +64,6 @@ async def create_portal(
         return {"url": session.url}
     except Exception as exc:
         logger.error("Failed to create portal session: %s", exc)
-        raise HTTPException(status_code=500, detail="Could not open billing portal. Please try again.")
+        raise HTTPException(
+            status_code=500, detail="Could not open billing portal. Please try again."
+        )

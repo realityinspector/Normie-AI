@@ -16,7 +16,9 @@ class ApiKey(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    key: Mapped[str] = mapped_column(String(255), unique=True, index=True, default=_generate_api_key)
+    key: Mapped[str] = mapped_column(
+        String(255), unique=True, index=True, default=_generate_api_key
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     rate_limit: Mapped[int] = mapped_column(Integer, default=100)
     created_at: Mapped[datetime] = mapped_column(

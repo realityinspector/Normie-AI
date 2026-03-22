@@ -9,7 +9,11 @@ from app.models.user import User
 from app.models.message import Message
 from app.models.room import Room
 from app.models.transcript import Transcript
-from app.schemas.transcript import TranscriptRead, TranscriptCreate, TranscriptDetailRead
+from app.schemas.transcript import (
+    TranscriptRead,
+    TranscriptCreate,
+    TranscriptDetailRead,
+)
 from app.schemas.message import MessageRead
 
 router = APIRouter()
@@ -63,9 +67,7 @@ async def get_transcript(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(Transcript).where(Transcript.id == transcript_id)
-    )
+    result = await db.execute(select(Transcript).where(Transcript.id == transcript_id))
     transcript = result.scalar_one_or_none()
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")

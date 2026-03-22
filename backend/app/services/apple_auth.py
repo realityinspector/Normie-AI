@@ -1,5 +1,4 @@
 import jwt
-import httpx
 from jwt import PyJWKClient
 from app.config import get_settings
 

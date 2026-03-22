@@ -18,7 +18,9 @@ def _configure_stripe() -> None:
     stripe.api_key = settings.stripe_secret_key
 
 
-async def create_checkout_session(user: User, price_id: str, db: AsyncSession) -> stripe.checkout.Session:
+async def create_checkout_session(
+    user: User, price_id: str, db: AsyncSession
+) -> stripe.checkout.Session:
     """Create a Stripe Checkout session for the given user and price.
 
     If the user doesn't have a Stripe customer ID yet, one is created and

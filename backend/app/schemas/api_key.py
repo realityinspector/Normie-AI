@@ -23,6 +23,7 @@ class ApiKeyResponse(BaseModel):
 
 class ApiKeyListItem(BaseModel):
     """Like ApiKeyResponse but masks the key for security."""
+
     id: uuid.UUID
     name: str
     key_prefix: str  # Only first 12 chars shown

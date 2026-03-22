@@ -5,6 +5,7 @@ Revises: 002
 Create Date: 2026-03-21
 
 """
+
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
@@ -35,7 +36,9 @@ def downgrade() -> None:
     # Restore apple_sub to non-nullable (backfill NULLs first to avoid errors)
     conn = op.get_bind()
     conn.execute(
-        sa.text("UPDATE users SET apple_sub = 'removed_' || id::text WHERE apple_sub IS NULL")
+        sa.text(
+            "UPDATE users SET apple_sub = 'removed_' || id::text WHERE apple_sub IS NULL"
+        )
     )
     op.alter_column(
         "users",

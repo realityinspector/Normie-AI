@@ -10,7 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import AppleSignInRequest, GoogleSignInRequest, LoginRequest, SignupRequest, TokenResponse
+from app.schemas.auth import (
+    AppleSignInRequest,
+    GoogleSignInRequest,
+    LoginRequest,
+    SignupRequest,
+    TokenResponse,
+)
+from pydantic import BaseModel
 from app.services.apple_auth import verify_apple_identity_token
 
 logger = logging.getLogger(__name__)
@@ -25,7 +32,9 @@ def _check_rate_limit(ip: str) -> bool:
     """Returns True if request is allowed, False if rate limited."""
     now = time.time()
     # Clean old entries
-    _auth_rate_limits[ip] = [t for t in _auth_rate_limits[ip] if now - t < _AUTH_RATE_WINDOW]
+    _auth_rate_limits[ip] = [
+        t for t in _auth_rate_limits[ip] if now - t < _AUTH_RATE_WINDOW
+    ]
     if len(_auth_rate_limits[ip]) >= _AUTH_RATE_LIMIT:
         return False
     _auth_rate_limits[ip].append(now)
@@ -78,7 +87,9 @@ async def signup(
     """Create a new user with email and password."""
     client_ip = request.client.host if request.client else "unknown"
     if not _check_rate_limit(client_ip):
-        raise HTTPException(status_code=429, detail="Too many requests. Try again in a minute.")
+        raise HTTPException(
+            status_code=429, detail="Too many requests. Try again in a minute."
+        )
 
     # Check if email already exists
     result = await db.execute(select(User).where(User.email == body.email))
@@ -114,7 +125,9 @@ async def login(
     """Authenticate with email and password."""
     client_ip = request.client.host if request.client else "unknown"
     if not _check_rate_limit(client_ip):
-        raise HTTPException(status_code=429, detail="Too many requests. Try again in a minute.")
+        raise HTTPException(
+            status_code=429, detail="Too many requests. Try again in a minute."
+        )
 
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
@@ -249,7 +262,6 @@ async def google_sign_in(
 
 
 # --- Dev/Test auth (remove before App Store submission) ---
-from pydantic import BaseModel
 
 
 class DevSignInRequest(BaseModel):
@@ -266,13 +278,16 @@ async def dev_sign_in(
     """DEV ONLY: Create a test user without Apple Sign-In. Gated by DEV_AUTH_ENABLED env var."""
     client_ip = request.client.host if request.client else "unknown"
     if not _check_rate_limit(client_ip):
-        raise HTTPException(status_code=429, detail="Too many requests. Try again in a minute.")
+        raise HTTPException(
+            status_code=429, detail="Too many requests. Try again in a minute."
+        )
 
     settings = get_settings()
     if settings.dev_auth_enabled != "true":
         raise HTTPException(status_code=404, detail="Not found")
     logger.warning("DEV AUTH ENDPOINT IS ENABLED — DO NOT USE IN PRODUCTION")
     import hashlib
+
     fake_sub = "dev_" + hashlib.sha256(body.name.encode()).hexdigest()[:16]
 
     result = await db.execute(select(User).where(User.apple_sub == fake_sub))
@@ -280,7 +295,12 @@ async def dev_sign_in(
 
     if not user:
         from app.models.user import CommunicationStyle
-        style = CommunicationStyle.autistic if body.communication_style == "autistic" else CommunicationStyle.neurotypical
+
+        style = (
+            CommunicationStyle.autistic
+            if body.communication_style == "autistic"
+            else CommunicationStyle.neurotypical
+        )
         settings = get_settings()
         user = User(
             apple_sub=fake_sub,

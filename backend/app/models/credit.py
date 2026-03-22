@@ -19,7 +19,9 @@ class CreditTransaction(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
     amount: Mapped[int] = mapped_column(Integer)  # positive=add, negative=deduct
     transaction_type: Mapped[TransactionType] = mapped_column(SAEnum(TransactionType))
-    apple_transaction_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
+    apple_transaction_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, unique=True
+    )
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)

@@ -5,6 +5,7 @@ Revises: 003
 Create Date: 2026-03-21
 
 """
+
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
@@ -23,7 +24,12 @@ def upgrade() -> None:
         sa.Column("key", sa.String(255), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("rate_limit", sa.Integer(), nullable=False, server_default="100"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column("request_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),

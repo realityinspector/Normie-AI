@@ -19,7 +19,9 @@ class Transcript(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     room_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("rooms.id"))
     room_name: Mapped[str] = mapped_column(String(255))
-    slug: Mapped[str] = mapped_column(String(16), unique=True, index=True, default=_generate_slug)
+    slug: Mapped[str] = mapped_column(
+        String(16), unique=True, index=True, default=_generate_slug
+    )
     message_count: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)

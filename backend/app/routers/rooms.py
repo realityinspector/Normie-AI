@@ -7,7 +7,7 @@ from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.models.user import User
 from app.models.room import Room, RoomParticipant
-from app.schemas.room import RoomCreate, RoomRead, RoomUpdate, ParticipantRead
+from app.schemas.room import RoomCreate, RoomRead, ParticipantRead
 
 router = APIRouter()
 
@@ -129,7 +129,9 @@ async def delete_room(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     if room.owner_id != user.id:
-        raise HTTPException(status_code=403, detail="Only the owner can delete this room")
+        raise HTTPException(
+            status_code=403, detail="Only the owner can delete this room"
+        )
     await db.delete(room)
 
 

@@ -16,7 +16,9 @@ class Room(Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
 
-    participants = relationship("RoomParticipant", back_populates="room", cascade="all, delete-orphan")
+    participants = relationship(
+        "RoomParticipant", back_populates="room", cascade="all, delete-orphan"
+    )
 
 
 class RoomParticipant(Base):
@@ -24,7 +26,9 @@ class RoomParticipant(Base):
     __table_args__ = (UniqueConstraint("room_id", "user_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    room_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("rooms.id", ondelete="CASCADE"))
+    room_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("rooms.id", ondelete="CASCADE")
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)

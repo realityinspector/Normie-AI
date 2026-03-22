@@ -32,7 +32,9 @@ def _get_session_user(request: Request) -> dict | None:
         return None
     settings = get_settings()
     try:
-        payload = pyjwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        payload = pyjwt.decode(
+            token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
+        )
         return {
             "user_id": payload["sub"],
             "token": token,
@@ -87,13 +89,16 @@ async def app_page(request: Request):
     # Fetch display_name from DB for template context
     display_name = await _get_display_name(session["user_id"])
 
-    return templates.TemplateResponse("pages/app.html", {
-        "request": request,
-        "token": session["token"],
-        "user_id": session["user_id"],
-        "display_name": display_name,
-        "initial_room_id": None,
-    })
+    return templates.TemplateResponse(
+        "pages/app.html",
+        {
+            "request": request,
+            "token": session["token"],
+            "user_id": session["user_id"],
+            "display_name": display_name,
+            "initial_room_id": None,
+        },
+    )
 
 
 @router.get("/app/room/{room_id}", response_class=HTMLResponse)
@@ -105,13 +110,16 @@ async def app_room_page(request: Request, room_id: uuid.UUID):
 
     display_name = await _get_display_name(session["user_id"])
 
-    return templates.TemplateResponse("pages/app.html", {
-        "request": request,
-        "token": session["token"],
-        "user_id": session["user_id"],
-        "display_name": display_name,
-        "initial_room_id": str(room_id),
-    })
+    return templates.TemplateResponse(
+        "pages/app.html",
+        {
+            "request": request,
+            "token": session["token"],
+            "user_id": session["user_id"],
+            "display_name": display_name,
+            "initial_room_id": str(room_id),
+        },
+    )
 
 
 async def _get_display_name(user_id_str: str) -> str:
@@ -147,20 +155,25 @@ async def _get_user_by_id(user_id_str: str) -> User | None:
 # Pricing page (public)
 # ---------------------------------------------------------------------------
 
+
 @router.get("/pricing", response_class=HTMLResponse)
 async def pricing_page(request: Request):
     """Subscription pricing page with plan selection and checkout."""
     settings = get_settings()
-    return templates.TemplateResponse("pages/pricing.html", {
-        "request": request,
-        "monthly_price_id": settings.stripe_monthly_price_id,
-        "yearly_price_id": settings.stripe_yearly_price_id,
-    })
+    return templates.TemplateResponse(
+        "pages/pricing.html",
+        {
+            "request": request,
+            "monthly_price_id": settings.stripe_monthly_price_id,
+            "yearly_price_id": settings.stripe_yearly_price_id,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
 # Settings page (auth required)
 # ---------------------------------------------------------------------------
+
 
 @router.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
@@ -173,10 +186,13 @@ async def settings_page(request: Request):
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    return templates.TemplateResponse("pages/settings.html", {
-        "request": request,
-        "user": user,
-    })
+    return templates.TemplateResponse(
+        "pages/settings.html",
+        {
+            "request": request,
+            "user": user,
+        },
+    )
 
 
 # ─── Share Pages ───
@@ -209,20 +225,25 @@ async def public_transcript(request: Request, slug: str):
 
         messages = []
         for msg in messages_raw:
-            messages.append({
-                "sender_name": msg.sender.display_name if msg.sender else "Unknown",
-                "sender_id": str(msg.sender_id),
-                "original_text": msg.original_text,
-                "created_at": msg.created_at,
-                "is_owner": str(msg.sender_id) == str(transcript.user_id),
-            })
+            messages.append(
+                {
+                    "sender_name": msg.sender.display_name if msg.sender else "Unknown",
+                    "sender_id": str(msg.sender_id),
+                    "original_text": msg.original_text,
+                    "created_at": msg.created_at,
+                    "is_owner": str(msg.sender_id) == str(transcript.user_id),
+                }
+            )
 
-    return templates.TemplateResponse("share/transcript.html", {
-        "request": request,
-        "transcript": transcript,
-        "messages": messages,
-        "base_url": settings.base_url.rstrip("/"),
-    })
+    return templates.TemplateResponse(
+        "share/transcript.html",
+        {
+            "request": request,
+            "transcript": transcript,
+            "messages": messages,
+            "base_url": settings.base_url.rstrip("/"),
+        },
+    )
 
 
 @router.get("/r/{room_id}/invite", response_class=HTMLResponse)
@@ -249,9 +270,12 @@ async def room_invite(request: Request, room_id: uuid.UUID):
         )
         participant_count = count_result.scalar() or 0
 
-    return templates.TemplateResponse("share/room_invite.html", {
-        "request": request,
-        "room": room,
-        "participant_count": participant_count,
-        "base_url": settings.base_url.rstrip("/"),
-    })
+    return templates.TemplateResponse(
+        "share/room_invite.html",
+        {
+            "request": request,
+            "room": room,
+            "participant_count": participant_count,
+            "base_url": settings.base_url.rstrip("/"),
+        },
+    )

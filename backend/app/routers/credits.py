@@ -22,9 +22,9 @@ router = APIRouter()
 
 # Product ID -> number of subscription months mapping
 PRODUCT_MONTHS = {
-    "com.normalaizer.normie.monthly": 1,     # $4.99/month
-    "com.normalaizer.normie.yearly": 12,     # $39.99/year
-    "com.normalaizer.normie.giftpack10": 10, # $39.99 gift pack
+    "com.normalaizer.normie.monthly": 1,  # $4.99/month
+    "com.normalaizer.normie.yearly": 12,  # $39.99/year
+    "com.normalaizer.normie.giftpack10": 10,  # $39.99 gift pack
 }
 
 # Legacy product -> credit mapping (kept for backwards compat)
@@ -82,7 +82,9 @@ async def verify_purchase(
     # ⚠️ MOCK: Apple StoreKit JWS signature is NOT verified
     # This is NOT safe for production App Store purchases
     # TODO: Implement proper JWS verification against Apple's certificate chain
-    logger.warning("MOCK: Apple StoreKit JWS signature NOT verified — do not use for real purchases")
+    logger.warning(
+        "MOCK: Apple StoreKit JWS signature NOT verified — do not use for real purchases"
+    )
 
     if months:
         # New subscription model: extend subscription
@@ -127,10 +129,14 @@ async def redeem_referral(
     code = body.referral_code.strip().upper()
 
     if code == user.referral_code:
-        raise HTTPException(status_code=400, detail="You cannot redeem your own referral code")
+        raise HTTPException(
+            status_code=400, detail="You cannot redeem your own referral code"
+        )
 
     if user.referred_by is not None:
-        raise HTTPException(status_code=400, detail="You have already used a referral code")
+        raise HTTPException(
+            status_code=400, detail="You have already used a referral code"
+        )
 
     # Find the referrer
     result = await db.execute(select(User).where(User.referral_code == code))

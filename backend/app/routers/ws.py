@@ -1,10 +1,8 @@
 import uuid
 import json
-from datetime import datetime, timezone
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 import jwt as pyjwt
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.config import get_settings
 from app.database import async_session
@@ -22,7 +20,9 @@ async def _authenticate_ws(token: str) -> uuid.UUID | None:
     """Verify JWT from WebSocket query param and return user_id."""
     settings = get_settings()
     try:
-        payload = pyjwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        payload = pyjwt.decode(
+            token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
+        )
         return uuid.UUID(payload["sub"])
     except Exception:
         return None
@@ -68,10 +68,17 @@ async def chat_websocket(
     connections = manager.get_room_connections(room_id)
     for uid in connections:
         if uid != user_id:
-            await manager.send_to_user(room_id, uid, {
-                "type": "user_joined",
-                "data": {"user_id": str(user_id), "display_name": user.display_name},
-            })
+            await manager.send_to_user(
+                room_id,
+                uid,
+                {
+                    "type": "user_joined",
+                    "data": {
+                        "user_id": str(user_id),
+                        "display_name": user.display_name,
+                    },
+                },
+            )
 
     try:
         while True:
@@ -86,21 +93,33 @@ async def chat_websocket(
                 async with async_session() as db:
                     try:
                         # Check subscription / free access
-                        user_result2 = await db.execute(select(User).where(User.id == user_id))
+                        user_result2 = await db.execute(
+                            select(User).where(User.id == user_id)
+                        )
                         current_user = user_result2.scalar_one()
                         await check_access(db, current_user)
                     except Exception:
-                        await manager.send_to_user(room_id, user_id, {
-                            "type": "error",
-                            "data": {"message": "Subscription required. Neurodivergent users get free access."},
-                        })
+                        await manager.send_to_user(
+                            room_id,
+                            user_id,
+                            {
+                                "type": "error",
+                                "data": {
+                                    "message": "Subscription required. Neurodivergent users get free access."
+                                },
+                            },
+                        )
                         continue
 
                     # Reload room participants
                     room_result = await db.execute(
                         select(Room)
                         .where(Room.id == room_id)
-                        .options(selectinload(Room.participants).selectinload(RoomParticipant.user))
+                        .options(
+                            selectinload(Room.participants).selectinload(
+                                RoomParticipant.user
+                            )
+                        )
                     )
                     room = room_result.scalar_one()
 
@@ -115,7 +134,9 @@ async def chat_websocket(
                         if user.communication_style != recipient.communication_style:
                             try:
                                 translated = await translate_text(
-                                    text, user.communication_style, recipient.communication_style
+                                    text,
+                                    user.communication_style,
+                                    recipient.communication_style,
                                 )
                                 translations[str(rp.user_id)] = translated
                             except Exception:
@@ -139,39 +160,51 @@ async def chat_websocket(
                     for uid, ws in manager.get_room_connections(room_id).items():
                         if uid == user_id:
                             # Sender sees original
-                            await manager.send_to_user(room_id, uid, {
-                                "type": "message",
-                                "data": {
-                                    "id": str(msg.id),
-                                    "sender_id": str(user_id),
-                                    "sender_name": user.display_name,
-                                    "original_text": text,
-                                    "translated_text": None,
-                                    "created_at": now,
+                            await manager.send_to_user(
+                                room_id,
+                                uid,
+                                {
+                                    "type": "message",
+                                    "data": {
+                                        "id": str(msg.id),
+                                        "sender_id": str(user_id),
+                                        "sender_name": user.display_name,
+                                        "original_text": text,
+                                        "translated_text": None,
+                                        "created_at": now,
+                                    },
                                 },
-                            })
+                            )
                         else:
                             # Recipient sees translated version
                             translated = translations.get(str(uid), text)
-                            await manager.send_to_user(room_id, uid, {
-                                "type": "message",
-                                "data": {
-                                    "id": str(msg.id),
-                                    "sender_id": str(user_id),
-                                    "sender_name": user.display_name,
-                                    "original_text": translated,
-                                    "translated_text": translated,
-                                    "created_at": now,
+                            await manager.send_to_user(
+                                room_id,
+                                uid,
+                                {
+                                    "type": "message",
+                                    "data": {
+                                        "id": str(msg.id),
+                                        "sender_id": str(user_id),
+                                        "sender_name": user.display_name,
+                                        "original_text": translated,
+                                        "translated_text": translated,
+                                        "created_at": now,
+                                    },
                                 },
-                            })
+                            )
 
     except WebSocketDisconnect:
         manager.disconnect(room_id, user_id)
         # Notify room of leave
         for uid in manager.get_room_connections(room_id):
-            await manager.send_to_user(room_id, uid, {
-                "type": "user_left",
-                "data": {"user_id": str(user_id)},
-            })
+            await manager.send_to_user(
+                room_id,
+                uid,
+                {
+                    "type": "user_left",
+                    "data": {"user_id": str(user_id)},
+                },
+            )
     except Exception:
         manager.disconnect(room_id, user_id)

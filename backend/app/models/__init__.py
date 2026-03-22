@@ -5,4 +5,12 @@ from app.models.transcript import Transcript
 from app.models.credit import CreditTransaction
 from app.models.api_key import ApiKey
 
-__all__ = ["User", "Room", "RoomParticipant", "Message", "Transcript", "CreditTransaction", "ApiKey"]
+__all__ = [
+    "User",
+    "Room",
+    "RoomParticipant",
+    "Message",
+    "Transcript",
+    "CreditTransaction",
+    "ApiKey",
+]

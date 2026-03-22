@@ -8,7 +8,20 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
-from app.routers import auth, users, rooms, messages, translate, transcripts, credits, ws, pages, api_v1, stripe_webhooks, stripe_checkout
+from app.routers import (
+    auth,
+    users,
+    rooms,
+    messages,
+    translate,
+    transcripts,
+    credits,
+    ws,
+    pages,
+    api_v1,
+    stripe_webhooks,
+    stripe_checkout,
+)
 from app.routers.integrations import router as integrations_router
 
 # Resolve paths relative to this file
@@ -22,7 +35,9 @@ async def lifespan(app: FastAPI):
     logger = logging.getLogger("normalaizer")
     settings = get_settings()
     if not settings.jwt_secret or len(settings.jwt_secret) < 16:
-        logger.warning("JWT_SECRET is too short — use a strong random secret in production!")
+        logger.warning(
+            "JWT_SECRET is too short — use a strong random secret in production!"
+        )
     if settings.dev_auth_enabled == "true":
         logger.warning("DEV_AUTH_ENABLED is true — disable in production!")
     yield
@@ -36,7 +51,11 @@ app = FastAPI(
 )
 
 settings = get_settings()
-cors_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()] if settings.cors_origins else [settings.base_url]
+cors_origins = (
+    [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+    if settings.cors_origins
+    else [settings.base_url]
+)
 # Always allow localhost for dev
 if "http://localhost:8000" not in cors_origins:
     cors_origins.append("http://localhost:8000")

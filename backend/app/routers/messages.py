@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.models.user import User
-from app.models.room import Room, RoomParticipant
+from app.models.room import Room
 from app.models.message import Message
 from app.schemas.message import MessageRead
 
@@ -24,9 +24,7 @@ async def get_messages(
 ):
     # Verify room access
     result = await db.execute(
-        select(Room)
-        .where(Room.id == room_id)
-        .options(selectinload(Room.participants))
+        select(Room).where(Room.id == room_id).options(selectinload(Room.participants))
     )
     room = result.scalar_one_or_none()
     if not room:
@@ -55,7 +53,9 @@ async def get_messages(
                 room_id=msg.room_id,
                 sender_id=msg.sender_id,
                 sender_name=msg.sender.display_name if msg.sender else "Unknown",
-                original_text=msg.original_text if msg.sender_id == user.id else (translated or msg.original_text),
+                original_text=msg.original_text
+                if msg.sender_id == user.id
+                else (translated or msg.original_text),
                 translated_text=translated if msg.sender_id != user.id else None,
                 created_at=msg.created_at,
             )
