@@ -41,6 +41,9 @@ class User(Base):
     referred_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id"), nullable=True, default=None
     )
+    stripe_customer_id: Mapped[str | None] = mapped_column(
+        String(255), unique=True, index=True, nullable=True, default=None
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

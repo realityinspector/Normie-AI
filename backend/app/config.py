@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     initial_credits: int = 50
     # Set to "true" to enable /auth/dev endpoint (disable in production!)
     dev_auth_enabled: str = "true"
+    # Stripe
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    stripe_webhook_secret: str = ""
+    # Base URL for redirect URLs (e.g. https://normalaizer.com)
+    base_url: str = "http://localhost:8000"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
