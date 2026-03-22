@@ -7,7 +7,18 @@
 {% endblock %}
 
 {% block content %}
-<div x-data="chatApp('{{ token }}', '{{ user_id }}', '{{ display_name }}', '{{ initial_room_id or '' }}')"
+<script id="app-data" type="application/json"
+  data-token="{{ token }}"
+  data-user-id="{{ user_id }}"
+  data-display-name="{{ display_name|e }}"
+  data-initial-room-id="{{ initial_room_id or '' }}"
+  style="display:none"></script>
+<div x-data="chatApp(
+       document.getElementById('app-data').dataset.token,
+       document.getElementById('app-data').dataset.userId,
+       document.getElementById('app-data').dataset.displayName,
+       document.getElementById('app-data').dataset.initialRoomId
+     )"
      x-init="init()"
      class="flex flex-col h-screen relative">
 

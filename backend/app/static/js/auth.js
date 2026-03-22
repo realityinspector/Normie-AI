@@ -40,6 +40,7 @@ function googleSignIn(clientId) {
       try {
         const res = await fetch("/auth/google", {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ credential: response.credential }),
         });
@@ -101,6 +102,7 @@ function loginForm() {
       try {
         const res = await fetch("/auth/login", {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: this.email.trim(),
@@ -191,6 +193,7 @@ function signupForm() {
       try {
         const res = await fetch("/auth/signup", {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: this.email.trim(),
