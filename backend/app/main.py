@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth, users, rooms, messages, translate, transcripts, credits, ws
+from app.routers.integrations import router as integrations_router
 
 
 @asynccontextmanager
@@ -32,6 +33,7 @@ app.include_router(translate.router, prefix="/translate", tags=["translate"])
 app.include_router(transcripts.router, prefix="/transcripts", tags=["transcripts"])
 app.include_router(credits.router, prefix="/credits", tags=["credits"])
 app.include_router(ws.router, tags=["websocket"])
+app.include_router(integrations_router, prefix="/integrations", tags=["integrations"])
 
 
 @app.get("/health")
