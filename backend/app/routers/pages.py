@@ -16,3 +16,15 @@ templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
 async def landing(request: Request):
     """Marketing landing page with signup CTA."""
     return templates.TemplateResponse("pages/landing.html", {"request": request})
+
+
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """Login page with email/password form."""
+    return templates.TemplateResponse("pages/login.html", {"request": request})
+
+
+@router.get("/signup", response_class=HTMLResponse)
+async def signup_page(request: Request):
+    """Signup page with registration form."""
+    return templates.TemplateResponse("pages/signup.html", {"request": request})

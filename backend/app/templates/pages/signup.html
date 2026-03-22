@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up – NORMALAIZER{% endblock %}
+
+{% block head %}
+<script src="/static/js/auth.js" defer></script>
+{% endblock %}
+
+{% block content %}
+{% include "partials/header.html" %}
+
+<main class="px-5 py-10" x-data="signupForm()">
+
+  <div class="text-center mb-8">
+    <h1 class="text-2xl font-extrabold text-gray-900">Create your account</h1>
+    <p class="mt-2 text-sm text-gray-500">Start bridging conversations with NORMALAIZER</p>
+  </div>
+
+  <!-- Global error message -->
+  <div x-show="errorMessage" x-transition
+       class="mb-5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
+       x-text="errorMessage"></div>
+
+  <form @submit.prevent="submit" class="space-y-5">
+
+    <!-- Email -->
+    <div>
+      <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+      <input id="email" type="email" x-model="email" required
+             class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+             placeholder="you@example.com" />
+      <p x-show="errors.email" x-text="errors.email" class="mt-1 text-xs text-red-600"></p>
+    </div>
+
+    <!-- Display Name -->
+    <div>
+      <label for="display_name" class="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+      <input id="display_name" type="text" x-model="displayName" required
+             class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+             placeholder="How others will see you" />
+      <p x-show="errors.displayName" x-text="errors.displayName" class="mt-1 text-xs text-red-600"></p>
+    </div>
+
+    <!-- Password -->
+    <div>
+      <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+      <input id="password" type="password" x-model="password" required
+             class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+             placeholder="At least 8 characters" />
+      <p x-show="errors.password" x-text="errors.password" class="mt-1 text-xs text-red-600"></p>
+    </div>
+
+    <!-- Confirm Password -->
+    <div>
+      <label for="confirm_password" class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+      <input id="confirm_password" type="password" x-model="confirmPassword" required
+             class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+             placeholder="Re-enter your password" />
+      <p x-show="errors.confirmPassword" x-text="errors.confirmPassword" class="mt-1 text-xs text-red-600"></p>
+    </div>
+
+    <!-- Submit -->
+    <button type="submit" :disabled="loading"
+            class="w-full flex items-center justify-center px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm shadow-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+      <svg x-show="loading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+      </svg>
+      <span x-text="loading ? 'Creating account...' : 'Create Account'"></span>
+    </button>
+  </form>
+
+  <!-- Link to login -->
+  <p class="mt-8 text-center text-sm text-gray-500">
+    Already have an account?
+    <a href="/login" class="font-semibold text-indigo-600 hover:text-indigo-500 transition">Sign in</a>
+  </p>
+
+</main>
+{% endblock %}
