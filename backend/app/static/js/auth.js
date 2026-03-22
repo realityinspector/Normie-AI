@@ -17,10 +17,11 @@ function handleGoogleCredentialResponse(response) {
 /**
  * Alpine.js component for Google Sign-In.
  */
-function googleSignIn(clientId) {
+function googleSignIn(clientId, nextUrl) {
   return {
     googleError: "",
     clientId: clientId,
+    nextUrl: nextUrl || "",
 
     init() {
       // Listen for the Google credential response
@@ -53,8 +54,8 @@ function googleSignIn(clientId) {
           return;
         }
 
-        // Success — redirect to app
-        window.location.href = "/app";
+        // Success — redirect to next URL or app
+        window.location.href = this.nextUrl || "/app";
       } catch (err) {
         this.googleError = "Network error. Please check your connection.";
       }
@@ -62,12 +63,13 @@ function googleSignIn(clientId) {
   };
 }
 
-function loginForm() {
+function loginForm(nextUrl) {
   return {
     email: "",
     password: "",
     loading: false,
     errorMessage: "",
+    nextUrl: nextUrl || "",
     errors: {
       email: "",
       password: "",
@@ -117,8 +119,8 @@ function loginForm() {
           return;
         }
 
-        // Success — redirect to app
-        window.location.href = "/app";
+        // Success — redirect to next URL or app
+        window.location.href = this.nextUrl || "/app";
       } catch (err) {
         this.errorMessage = "Network error. Please check your connection.";
       } finally {
@@ -128,7 +130,7 @@ function loginForm() {
   };
 }
 
-function signupForm() {
+function signupForm(nextUrl) {
   return {
     email: "",
     displayName: "",
@@ -136,6 +138,7 @@ function signupForm() {
     confirmPassword: "",
     loading: false,
     errorMessage: "",
+    nextUrl: nextUrl || "",
     errors: {
       email: "",
       displayName: "",
@@ -209,8 +212,8 @@ function signupForm() {
           return;
         }
 
-        // Success — redirect to app
-        window.location.href = "/app";
+        // Success — redirect to next URL or app
+        window.location.href = this.nextUrl || "/app";
       } catch (err) {
         this.errorMessage = "Network error. Please check your connection.";
       } finally {

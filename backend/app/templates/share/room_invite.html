@@ -49,14 +49,14 @@
         You've been invited to join this conversation on NORMALAIZER, the platform that bridges neurotypical and neurodivergent communication styles.
       </p>
 
-      <a href="/app/room/{{ room.id }}"
+      <a href="/r/{{ room.id }}/join"
          class="block w-full px-6 py-3 text-sm font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition text-center mb-3">
         Join Room
       </a>
 
       <p class="text-xs text-gray-400">
         Don't have an account?
-        <a href="/signup" class="text-indigo-600 font-semibold hover:underline">Sign up free</a>
+        <a href="/signup?next=/r/{{ room.id }}/join" class="text-indigo-600 font-semibold hover:underline">Sign up free</a>
       </p>
     </div>
 

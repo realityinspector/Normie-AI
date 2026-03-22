@@ -63,9 +63,14 @@ async def developers(request: Request, user: User = Depends(get_current_user)):
 async def login_page(request: Request):
     """Login page with email/password form."""
     settings = get_settings()
+    next_url = request.query_params.get("next", "")
     return templates.TemplateResponse(
         "pages/login.html",
-        {"request": request, "google_client_id": settings.google_client_id},
+        {
+            "request": request,
+            "google_client_id": settings.google_client_id,
+            "next_url": next_url,
+        },
     )
 
 
@@ -73,9 +78,14 @@ async def login_page(request: Request):
 async def signup_page(request: Request):
     """Signup page with registration form."""
     settings = get_settings()
+    next_url = request.query_params.get("next", "")
     return templates.TemplateResponse(
         "pages/signup.html",
-        {"request": request, "google_client_id": settings.google_client_id},
+        {
+            "request": request,
+            "google_client_id": settings.google_client_id,
+            "next_url": next_url,
+        },
     )
 
 
@@ -279,3 +289,39 @@ async def room_invite(request: Request, room_id: uuid.UUID):
             "base_url": settings.base_url.rstrip("/"),
         },
     )
+
+
+@router.get("/r/{room_id}/join")
+async def room_join(request: Request, room_id: uuid.UUID):
+    """Join a room via invite link. Redirects unauthenticated users to signup."""
+    session = _get_session_user(request)
+    if not session:
+        return RedirectResponse(
+            url=f"/signup?next=/r/{room_id}/join", status_code=302
+        )
+
+    # Auto-join the user to the room
+    async with async_session() as db:
+        result = await db.execute(select(Room).where(Room.id == room_id))
+        room = result.scalar_one_or_none()
+
+        if not room:
+            return HTMLResponse(
+                content="<h1>Room not found</h1><p><a href='/'>Go home</a></p>",
+                status_code=404,
+            )
+
+        uid = uuid.UUID(session["user_id"])
+
+        # Check if already a participant
+        existing = await db.execute(
+            select(RoomParticipant).where(
+                RoomParticipant.room_id == room_id,
+                RoomParticipant.user_id == uid,
+            )
+        )
+        if not existing.scalar_one_or_none():
+            db.add(RoomParticipant(room_id=room_id, user_id=uid))
+            await db.commit()
+
+    return RedirectResponse(url=f"/app/room/{room_id}", status_code=302)

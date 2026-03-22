@@ -14,7 +14,7 @@
 {% block content %}
 {% include "partials/header.html" %}
 
-<main class="px-5 py-10" x-data="signupForm()">
+<main class="px-5 py-10" x-data="signupForm('{{ next_url }}')">
 
   <div class="text-center mb-8">
     <h1 class="text-2xl font-extrabold text-gray-900">Create your account</h1>
@@ -84,7 +84,7 @@
 
   <!-- Google Sign-Up -->
   {% if google_client_id %}
-  <div x-data="googleSignIn('{{ google_client_id }}')">
+  <div x-data="googleSignIn('{{ google_client_id }}', '{{ next_url }}')">
     <div x-show="googleError" x-transition
          class="mb-3 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
          x-text="googleError"></div>
@@ -119,7 +119,7 @@
   <!-- Link to login -->
   <p class="mt-8 text-center text-sm text-gray-500">
     Already have an account?
-    <a href="/login" class="font-semibold text-indigo-600 hover:text-indigo-500 transition">Sign in</a>
+    <a href="/login{% if next_url %}?next={{ next_url }}{% endif %}" class="font-semibold text-indigo-600 hover:text-indigo-500 transition">Sign in</a>
   </p>
 
 </main>
