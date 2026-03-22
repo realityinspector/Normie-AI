@@ -3,12 +3,15 @@
 import pathlib
 import uuid
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import jwt as pyjwt
 
 from app.config import get_settings
+
+from app.middleware.auth import get_current_user
+from app.models.user import User
 
 _TEMPLATES_DIR = pathlib.Path(__file__).resolve().parent.parent / "templates"
 
@@ -36,6 +39,16 @@ def _get_session_user(request: Request) -> dict | None:
 async def landing(request: Request):
     """Marketing landing page with signup CTA."""
     return templates.TemplateResponse("pages/landing.html", {"request": request})
+
+
+@router.get("/developers", response_class=HTMLResponse)
+async def developers(request: Request, user: User = Depends(get_current_user)):
+    """Developer documentation and API key management page."""
+    base_url = str(request.base_url).rstrip("/")
+    return templates.TemplateResponse(
+        "pages/developers.html",
+        {"request": request, "user": user, "base_url": base_url},
+    )
 
 
 @router.get("/login", response_class=HTMLResponse)

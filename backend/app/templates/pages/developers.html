@@ -1,0 +1,701 @@
+{% extends "base.html" %}
+
+{% block title %}NORMALAIZER – Developer API{% endblock %}
+
+{% block head %}
+<style>
+  [x-cloak] { display: none !important; }
+  pre code { font-size: 0.75rem; line-height: 1.6; }
+  .copy-btn { transition: all 0.15s ease; }
+  .copy-btn:active { transform: scale(0.95); }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "partials/header.html" %}
+
+<main x-data="developerPage()" x-cloak class="pb-10">
+
+  <!-- Page Header -->
+  <section class="px-5 pt-8 pb-6">
+    <p class="inline-block px-3 py-1 text-xs font-semibold tracking-wide text-indigo-700 bg-indigo-50 rounded-full mb-3">
+      Developer API
+    </p>
+    <h1 class="text-2xl font-extrabold tracking-tight text-gray-900">Build with NORMALAIZER</h1>
+    <p class="mt-2 text-sm text-gray-500 leading-relaxed">
+      Integrate real-time communication style translation into your apps via our REST API.
+    </p>
+  </section>
+
+  <!-- Tab Navigation -->
+  <div class="px-5 border-b border-gray-200">
+    <nav class="flex gap-6 -mb-px text-sm font-medium">
+      <button @click="tab = 'keys'"
+              :class="tab === 'keys' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+              class="pb-3 border-b-2 transition">
+        API Keys
+      </button>
+      <button @click="tab = 'docs'"
+              :class="tab === 'docs' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+              class="pb-3 border-b-2 transition">
+        Documentation
+      </button>
+      <button @click="tab = 'examples'"
+              :class="tab === 'examples' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+              class="pb-3 border-b-2 transition">
+        Examples
+      </button>
+    </nav>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: API Keys                                                      -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div x-show="tab === 'keys'" x-transition class="px-5 pt-6">
+
+    <!-- Create New Key -->
+    <div class="mb-6">
+      <h2 class="text-lg font-bold text-gray-900 mb-3">Create API Key</h2>
+      <form @submit.prevent="createKey()" class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Key Name</label>
+          <input type="text" x-model="newKeyName" required placeholder="e.g. My App"
+                 class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Rate Limit (requests/hour)</label>
+          <input type="number" x-model.number="newKeyRateLimit" min="1" max="10000" placeholder="100"
+                 class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+        </div>
+        <button type="submit" :disabled="creating"
+                class="w-full px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-sm shadow-md hover:bg-indigo-700 transition disabled:opacity-50">
+          <span x-show="!creating">Create Key</span>
+          <span x-show="creating">Creating...</span>
+        </button>
+      </form>
+
+      <!-- Newly created key (shown once) -->
+      <div x-show="newlyCreatedKey" x-transition
+           class="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl">
+        <p class="text-xs font-semibold text-green-800 mb-1">Key created! Copy it now — it won't be shown again.</p>
+        <div class="flex items-center gap-2">
+          <code class="flex-1 text-xs bg-white px-3 py-2 rounded border border-green-300 break-all" x-text="newlyCreatedKey"></code>
+          <button @click="copyToClipboard(newlyCreatedKey)" class="copy-btn flex-shrink-0 px-3 py-2 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700">
+            Copy
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error message -->
+    <div x-show="error" x-transition class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+      <p class="text-xs text-red-700" x-text="error"></p>
+    </div>
+
+    <!-- Existing Keys -->
+    <div>
+      <h2 class="text-lg font-bold text-gray-900 mb-3">Your API Keys</h2>
+
+      <!-- Loading state -->
+      <p x-show="loadingKeys" class="text-sm text-gray-400">Loading keys...</p>
+
+      <!-- Empty state -->
+      <div x-show="!loadingKeys && keys.length === 0" class="text-center py-8">
+        <p class="text-sm text-gray-400">No API keys yet. Create one above to get started.</p>
+      </div>
+
+      <!-- Key list -->
+      <div class="space-y-3">
+        <template x-for="key in keys" :key="key.id">
+          <div class="border border-gray-200 rounded-xl p-4"
+               :class="key.is_active ? '' : 'opacity-50'">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0 flex-1">
+                <h3 class="font-semibold text-sm text-gray-900 truncate" x-text="key.name"></h3>
+                <p class="text-xs text-gray-400 font-mono mt-0.5" x-text="key.key_prefix"></p>
+              </div>
+              <span x-show="key.is_active"
+                    class="flex-shrink-0 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">Active</span>
+              <span x-show="!key.is_active"
+                    class="flex-shrink-0 px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-500 rounded-full">Revoked</span>
+            </div>
+            <div class="mt-3 flex items-center gap-4 text-xs text-gray-500">
+              <span>Rate limit: <strong x-text="key.rate_limit"></strong>/hr</span>
+              <span>Requests: <strong x-text="key.request_count"></strong></span>
+            </div>
+            <div class="mt-1 text-xs text-gray-400">
+              <span>Created: <span x-text="formatDate(key.created_at)"></span></span>
+              <template x-if="key.last_used_at">
+                <span> · Last used: <span x-text="formatDate(key.last_used_at)"></span></span>
+              </template>
+            </div>
+            <button x-show="key.is_active"
+                    @click="revokeKey(key.id)"
+                    class="mt-3 px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition">
+              Revoke Key
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Usage Stats -->
+    <div class="mt-8" x-show="usage.length > 0">
+      <h2 class="text-lg font-bold text-gray-900 mb-3">Usage Statistics</h2>
+      <div class="space-y-2">
+        <template x-for="u in usage" :key="u.api_key_id">
+          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div>
+              <p class="text-sm font-medium text-gray-900" x-text="u.api_key_name"></p>
+              <p class="text-xs text-gray-400" x-text="u.last_used_at ? 'Last used ' + formatDate(u.last_used_at) : 'Never used'"></p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm font-bold text-indigo-600" x-text="u.request_count + ' / ' + u.rate_limit"></p>
+              <p class="text-xs text-gray-400">requests / limit</p>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: Documentation                                                 -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div x-show="tab === 'docs'" x-transition class="px-5 pt-6">
+
+    <h2 class="text-lg font-bold text-gray-900 mb-1">API Reference</h2>
+    <p class="text-xs text-gray-500 mb-5">Base URL: <code class="px-1.5 py-0.5 bg-gray-100 rounded text-indigo-600">/api/v1</code></p>
+
+    <!-- Authentication -->
+    <div class="mb-6">
+      <h3 class="text-sm font-bold text-gray-900 mb-2">Authentication</h3>
+      <p class="text-xs text-gray-600 leading-relaxed mb-2">
+        API endpoints use an API key passed via the <code class="px-1 py-0.5 bg-gray-100 rounded">X-API-Key</code> header.
+        Key management endpoints use JWT Bearer authentication.
+      </p>
+      <div class="bg-gray-900 rounded-xl p-4 overflow-x-auto">
+        <pre><code class="text-green-400">X-API-Key: nrm_your_api_key_here</code></pre>
+      </div>
+    </div>
+
+    <!-- Endpoints -->
+    <div class="space-y-6">
+
+      <!-- POST /api/v1/translate -->
+      <div class="border border-gray-200 rounded-xl overflow-hidden">
+        <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+          <span class="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded">POST</span>
+          <code class="text-sm font-medium text-gray-900">/api/v1/translate</code>
+        </div>
+        <div class="p-4">
+          <p class="text-xs text-gray-600 mb-3">Translate text between neurotypical and autistic communication styles.</p>
+
+          <h4 class="text-xs font-bold text-gray-700 mb-1">Request Body</h4>
+          <table class="w-full text-xs mb-3">
+            <thead>
+              <tr class="border-b border-gray-100">
+                <th class="text-left py-1.5 text-gray-500 font-medium">Field</th>
+                <th class="text-left py-1.5 text-gray-500 font-medium">Type</th>
+                <th class="text-left py-1.5 text-gray-500 font-medium">Required</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-600">
+              <tr class="border-b border-gray-50">
+                <td class="py-1.5 font-mono">text</td>
+                <td class="py-1.5">string</td>
+                <td class="py-1.5">Yes</td>
+              </tr>
+              <tr class="border-b border-gray-50">
+                <td class="py-1.5 font-mono">direction</td>
+                <td class="py-1.5">string</td>
+                <td class="py-1.5">Yes</td>
+              </tr>
+              <tr>
+                <td class="py-1.5 font-mono">template</td>
+                <td class="py-1.5">string</td>
+                <td class="py-1.5">No</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p class="text-xs text-gray-500 mb-1"><strong>direction</strong>: <code class="bg-gray-100 px-1 rounded">autistic_to_neurotypical</code> or <code class="bg-gray-100 px-1 rounded">neurotypical_to_autistic</code></p>
+          <p class="text-xs text-gray-500 mb-3"><strong>template</strong>: <code class="bg-gray-100 px-1 rounded">casual</code>, <code class="bg-gray-100 px-1 rounded">professional</code>, <code class="bg-gray-100 px-1 rounded">emotional</code>, <code class="bg-gray-100 px-1 rounded">technical</code>, <code class="bg-gray-100 px-1 rounded">conflict</code></p>
+
+          <h4 class="text-xs font-bold text-gray-700 mb-1">Response (200)</h4>
+          <div class="bg-gray-900 rounded-lg p-3 overflow-x-auto">
+            <pre><code class="text-green-400">{
+  "original_text": "Your message",
+  "translated_text": "Translated version",
+  "direction": "neurotypical_to_autistic"
+}</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /api/v1/usage -->
+      <div class="border border-gray-200 rounded-xl overflow-hidden">
+        <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+          <span class="px-2 py-0.5 text-xs font-bold bg-green-100 text-green-700 rounded">GET</span>
+          <code class="text-sm font-medium text-gray-900">/api/v1/usage</code>
+        </div>
+        <div class="p-4">
+          <p class="text-xs text-gray-600 mb-3">Returns usage statistics for all API keys owned by the authenticated user.</p>
+
+          <h4 class="text-xs font-bold text-gray-700 mb-1">Response (200)</h4>
+          <div class="bg-gray-900 rounded-lg p-3 overflow-x-auto">
+            <pre><code class="text-green-400">[{
+  "api_key_id": "uuid",
+  "api_key_name": "My App Key",
+  "request_count": 42,
+  "rate_limit": 100,
+  "last_used_at": "2026-03-21T12:00:00Z"
+}]</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST /api/v1/keys -->
+      <div class="border border-gray-200 rounded-xl overflow-hidden">
+        <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+          <span class="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 rounded">POST</span>
+          <code class="text-sm font-medium text-gray-900">/api/v1/keys</code>
+        </div>
+        <div class="p-4">
+          <p class="text-xs text-gray-600 mb-3">Create a new API key. Requires JWT Bearer authentication.</p>
+
+          <h4 class="text-xs font-bold text-gray-700 mb-1">Request Body</h4>
+          <div class="bg-gray-900 rounded-lg p-3 overflow-x-auto mb-3">
+            <pre><code class="text-green-400">{
+  "name": "My Application",
+  "rate_limit": 100
+}</code></pre>
+          </div>
+
+          <h4 class="text-xs font-bold text-gray-700 mb-1">Response (200)</h4>
+          <div class="bg-gray-900 rounded-lg p-3 overflow-x-auto">
+            <pre><code class="text-green-400">{
+  "id": "uuid",
+  "name": "My Application",
+  "key": "nrm_full_api_key_shown_once",
+  "rate_limit": 100,
+  "created_at": "2026-03-21T12:00:00Z",
+  "is_active": true,
+  "request_count": 0,
+  "last_used_at": null
+}</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /api/v1/keys -->
+      <div class="border border-gray-200 rounded-xl overflow-hidden">
+        <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+          <span class="px-2 py-0.5 text-xs font-bold bg-green-100 text-green-700 rounded">GET</span>
+          <code class="text-sm font-medium text-gray-900">/api/v1/keys</code>
+        </div>
+        <div class="p-4">
+          <p class="text-xs text-gray-600 mb-3">List all API keys for the authenticated user (key values are masked). Requires JWT Bearer authentication.</p>
+
+          <h4 class="text-xs font-bold text-gray-700 mb-1">Response (200)</h4>
+          <div class="bg-gray-900 rounded-lg p-3 overflow-x-auto">
+            <pre><code class="text-green-400">[{
+  "id": "uuid",
+  "name": "My Application",
+  "key_prefix": "nrm_abc12345...",
+  "rate_limit": 100,
+  "created_at": "2026-03-21T12:00:00Z",
+  "is_active": true,
+  "request_count": 42,
+  "last_used_at": "2026-03-21T15:00:00Z"
+}]</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE /api/v1/keys/{key_id} -->
+      <div class="border border-gray-200 rounded-xl overflow-hidden">
+        <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+          <span class="px-2 py-0.5 text-xs font-bold bg-red-100 text-red-700 rounded">DELETE</span>
+          <code class="text-sm font-medium text-gray-900">/api/v1/keys/{key_id}</code>
+        </div>
+        <div class="p-4">
+          <p class="text-xs text-gray-600 mb-3">Revoke (deactivate) an API key. Requires JWT Bearer authentication. Returns <code class="bg-gray-100 px-1 rounded">204 No Content</code> on success.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Rate Limiting -->
+    <div class="mt-6">
+      <h3 class="text-sm font-bold text-gray-900 mb-2">Rate Limiting</h3>
+      <ul class="text-xs text-gray-600 space-y-1 list-disc pl-4">
+        <li>Each API key has a configurable rate limit (default: 100 requests/hour)</li>
+        <li>Rate limiting uses a 1-hour sliding window</li>
+        <li>When exceeded, the API returns <code class="px-1 py-0.5 bg-gray-100 rounded">429 Too Many Requests</code></li>
+      </ul>
+    </div>
+
+    <!-- Error Codes -->
+    <div class="mt-6">
+      <h3 class="text-sm font-bold text-gray-900 mb-2">Error Codes</h3>
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="border-b border-gray-200">
+            <th class="text-left py-1.5 text-gray-500 font-medium">Code</th>
+            <th class="text-left py-1.5 text-gray-500 font-medium">Description</th>
+          </tr>
+        </thead>
+        <tbody class="text-gray-600">
+          <tr class="border-b border-gray-50">
+            <td class="py-1.5 font-mono">400</td>
+            <td class="py-1.5">Invalid request (bad direction, missing fields)</td>
+          </tr>
+          <tr class="border-b border-gray-50">
+            <td class="py-1.5 font-mono">401</td>
+            <td class="py-1.5">Invalid or inactive API key / Missing authentication</td>
+          </tr>
+          <tr class="border-b border-gray-50">
+            <td class="py-1.5 font-mono">404</td>
+            <td class="py-1.5">Resource not found</td>
+          </tr>
+          <tr>
+            <td class="py-1.5 font-mono">429</td>
+            <td class="py-1.5">Rate limit exceeded</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: Code Examples                                                 -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div x-show="tab === 'examples'" x-transition class="px-5 pt-6">
+
+    <h2 class="text-lg font-bold text-gray-900 mb-4">Code Examples</h2>
+
+    <!-- Language selector -->
+    <div class="flex gap-2 mb-5">
+      <button @click="exampleLang = 'curl'"
+              :class="exampleLang === 'curl' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+              class="px-3 py-1.5 text-xs font-medium rounded-lg transition">
+        cURL
+      </button>
+      <button @click="exampleLang = 'python'"
+              :class="exampleLang === 'python' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+              class="px-3 py-1.5 text-xs font-medium rounded-lg transition">
+        Python
+      </button>
+      <button @click="exampleLang = 'javascript'"
+              :class="exampleLang === 'javascript' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+              class="px-3 py-1.5 text-xs font-medium rounded-lg transition">
+        JavaScript
+      </button>
+    </div>
+
+    <!-- cURL Examples -->
+    <div x-show="exampleLang === 'curl'" class="space-y-5">
+
+      <div>
+        <h3 class="text-sm font-bold text-gray-900 mb-2">Translate Text</h3>
+        <div class="relative bg-gray-900 rounded-xl p-4 overflow-x-auto">
+          <button @click="copyToClipboard($refs.curlTranslate.textContent)"
+                  class="copy-btn absolute top-2 right-2 px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600">
+            Copy
+          </button>
+          <pre x-ref="curlTranslate"><code class="text-green-400">curl -X POST {{ base_url }}/api/v1/translate \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: nrm_your_api_key_here" \
+  -d '{
+    "text": "Hey, we need to talk about the project deadline.",
+    "direction": "neurotypical_to_autistic",
+    "template": "professional"
+  }'</code></pre>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-bold text-gray-900 mb-2">Check Usage</h3>
+        <div class="relative bg-gray-900 rounded-xl p-4 overflow-x-auto">
+          <button @click="copyToClipboard($refs.curlUsage.textContent)"
+                  class="copy-btn absolute top-2 right-2 px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600">
+            Copy
+          </button>
+          <pre x-ref="curlUsage"><code class="text-green-400">curl {{ base_url }}/api/v1/usage \
+  -H "X-API-Key: nrm_your_api_key_here"</code></pre>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Python Examples -->
+    <div x-show="exampleLang === 'python'" class="space-y-5">
+
+      <div>
+        <h3 class="text-sm font-bold text-gray-900 mb-2">Translate Text</h3>
+        <div class="relative bg-gray-900 rounded-xl p-4 overflow-x-auto">
+          <button @click="copyToClipboard($refs.pyTranslate.textContent)"
+                  class="copy-btn absolute top-2 right-2 px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600">
+            Copy
+          </button>
+          <pre x-ref="pyTranslate"><code class="text-green-400">import requests
+
+API_KEY = "nrm_your_api_key_here"
+BASE_URL = "{{ base_url }}/api/v1"
+
+response = requests.post(
+    f"{BASE_URL}/translate",
+    headers={
+        "Content-Type": "application/json",
+        "X-API-Key": API_KEY,
+    },
+    json={
+        "text": "Hey, we need to talk about the project deadline.",
+        "direction": "neurotypical_to_autistic",
+        "template": "professional",
+    },
+)
+
+data = response.json()
+print(data["translated_text"])</code></pre>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-bold text-gray-900 mb-2">Manage API Keys</h3>
+        <div class="relative bg-gray-900 rounded-xl p-4 overflow-x-auto">
+          <button @click="copyToClipboard($refs.pyKeys.textContent)"
+                  class="copy-btn absolute top-2 right-2 px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600">
+            Copy
+          </button>
+          <pre x-ref="pyKeys"><code class="text-green-400">import requests
+
+JWT_TOKEN = "your_jwt_token_here"
+BASE_URL = "{{ base_url }}/api/v1"
+HEADERS = {"Authorization": f"Bearer {JWT_TOKEN}"}
+
+# Create a new key
+resp = requests.post(
+    f"{BASE_URL}/keys",
+    headers=HEADERS,
+    json={"name": "My App", "rate_limit": 100},
+)
+new_key = resp.json()
+print(f"API Key: {new_key['key']}")
+
+# List all keys
+resp = requests.get(f"{BASE_URL}/keys", headers=HEADERS)
+for key in resp.json():
+    print(f"{key['name']}: {key['key_prefix']}")
+
+# Revoke a key
+key_id = new_key["id"]
+requests.delete(f"{BASE_URL}/keys/{key_id}", headers=HEADERS)</code></pre>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- JavaScript Examples -->
+    <div x-show="exampleLang === 'javascript'" class="space-y-5">
+
+      <div>
+        <h3 class="text-sm font-bold text-gray-900 mb-2">Translate Text</h3>
+        <div class="relative bg-gray-900 rounded-xl p-4 overflow-x-auto">
+          <button @click="copyToClipboard($refs.jsTranslate.textContent)"
+                  class="copy-btn absolute top-2 right-2 px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600">
+            Copy
+          </button>
+          <pre x-ref="jsTranslate"><code class="text-green-400">const API_KEY = "nrm_your_api_key_here";
+const BASE_URL = "{{ base_url }}/api/v1";
+
+const response = await fetch(`${BASE_URL}/translate`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "X-API-Key": API_KEY,
+  },
+  body: JSON.stringify({
+    text: "Hey, we need to talk about the project deadline.",
+    direction: "neurotypical_to_autistic",
+    template: "professional",
+  }),
+});
+
+const data = await response.json();
+console.log(data.translated_text);</code></pre>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-bold text-gray-900 mb-2">Manage API Keys</h3>
+        <div class="relative bg-gray-900 rounded-xl p-4 overflow-x-auto">
+          <button @click="copyToClipboard($refs.jsKeys.textContent)"
+                  class="copy-btn absolute top-2 right-2 px-2 py-1 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600">
+            Copy
+          </button>
+          <pre x-ref="jsKeys"><code class="text-green-400">const JWT_TOKEN = "your_jwt_token_here";
+const BASE_URL = "{{ base_url }}/api/v1";
+const headers = { Authorization: `Bearer ${JWT_TOKEN}` };
+
+// Create a new key
+const createResp = await fetch(`${BASE_URL}/keys`, {
+  method: "POST",
+  headers: { ...headers, "Content-Type": "application/json" },
+  body: JSON.stringify({ name: "My App", rate_limit: 100 }),
+});
+const newKey = await createResp.json();
+console.log("API Key:", newKey.key);
+
+// List all keys
+const listResp = await fetch(`${BASE_URL}/keys`, { headers });
+const keys = await listResp.json();
+keys.forEach((k) => console.log(`${k.name}: ${k.key_prefix}`));
+
+// Revoke a key
+await fetch(`${BASE_URL}/keys/${newKey.id}`, {
+  method: "DELETE",
+  headers,
+});</code></pre>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+function developerPage() {
+  return {
+    tab: 'keys',
+    exampleLang: 'curl',
+
+    // Key management state
+    keys: [],
+    usage: [],
+    loadingKeys: true,
+    creating: false,
+    newKeyName: '',
+    newKeyRateLimit: 100,
+    newlyCreatedKey: null,
+    error: null,
+
+    async init() {
+      await this.loadKeys();
+      await this.loadUsage();
+    },
+
+    async loadKeys() {
+      this.loadingKeys = true;
+      try {
+        const resp = await fetch('/api/v1/keys', {
+          credentials: 'include',
+        });
+        if (resp.ok) {
+          this.keys = await resp.json();
+        } else if (resp.status === 401) {
+          window.location.href = '/auth/login';
+        }
+      } catch (e) {
+        this.error = 'Failed to load API keys.';
+      }
+      this.loadingKeys = false;
+    },
+
+    async loadUsage() {
+      try {
+        // Usage endpoint needs an API key, so we skip if no keys exist
+        if (this.keys.length === 0) return;
+        // We'll use the keys list data for usage stats instead
+        this.usage = this.keys.filter(k => k.is_active).map(k => ({
+          api_key_id: k.id,
+          api_key_name: k.name,
+          request_count: k.request_count,
+          rate_limit: k.rate_limit,
+          last_used_at: k.last_used_at,
+        }));
+      } catch (e) {
+        // Non-critical, silently ignore
+      }
+    },
+
+    async createKey() {
+      this.creating = true;
+      this.error = null;
+      this.newlyCreatedKey = null;
+      try {
+        const resp = await fetch('/api/v1/keys', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: this.newKeyName,
+            rate_limit: this.newKeyRateLimit || 100,
+          }),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          this.newlyCreatedKey = data.key;
+          this.newKeyName = '';
+          this.newKeyRateLimit = 100;
+          await this.loadKeys();
+          await this.loadUsage();
+        } else {
+          const err = await resp.json();
+          this.error = err.detail || 'Failed to create API key.';
+        }
+      } catch (e) {
+        this.error = 'Network error. Please try again.';
+      }
+      this.creating = false;
+    },
+
+    async revokeKey(keyId) {
+      if (!confirm('Are you sure you want to revoke this API key? This cannot be undone.')) return;
+      this.error = null;
+      try {
+        const resp = await fetch(`/api/v1/keys/${keyId}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (resp.ok || resp.status === 204) {
+          await this.loadKeys();
+          await this.loadUsage();
+        } else {
+          const err = await resp.json();
+          this.error = err.detail || 'Failed to revoke API key.';
+        }
+      } catch (e) {
+        this.error = 'Network error. Please try again.';
+      }
+    },
+
+    formatDate(iso) {
+      if (!iso) return 'N/A';
+      return new Date(iso).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    },
+
+    async copyToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text.trim());
+      } catch {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = text.trim();
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+    },
+  };
+}
+</script>
+
+{% endblock %}
