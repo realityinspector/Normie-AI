@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+import bcrypt
 import jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import AppleSignInRequest, TokenResponse
+from app.schemas.auth import AppleSignInRequest, LoginRequest, SignupRequest, TokenResponse
 from app.services.apple_auth import verify_apple_identity_token
 
 router = APIRouter()
@@ -22,6 +23,85 @@ def _create_token(user_id: str) -> tuple[str, int]:
     }
     token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     return token, expires_in
+
+
+def _set_session_cookie(response: Response, token: str, expires_in: int) -> None:
+    """Set an HttpOnly session cookie containing the JWT."""
+    response.set_cookie(
+        key="session",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=expires_in,
+        path="/",
+    )
+
+
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def _verify_password(password: str, password_hash: str) -> bool:
+    return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+
+
+@router.post("/signup", response_model=TokenResponse)
+async def signup(
+    request: SignupRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new user with email and password."""
+    # Check if email already exists
+    result = await db.execute(select(User).where(User.email == request.email))
+    existing_user = result.scalar_one_or_none()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this email already exists",
+        )
+
+    settings = get_settings()
+    user = User(
+        display_name=request.display_name,
+        email=request.email,
+        password_hash=_hash_password(request.password),
+        credit_balance=settings.initial_credits,
+    )
+    db.add(user)
+    await db.flush()
+
+    token, expires_in = _create_token(str(user.id))
+    _set_session_cookie(response, token, expires_in)
+    return TokenResponse(access_token=token, expires_in=expires_in)
+
+
+@router.post("/login", response_model=TokenResponse)
+async def login(
+    request: LoginRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """Authenticate with email and password."""
+    result = await db.execute(select(User).where(User.email == request.email))
+    user = result.scalar_one_or_none()
+
+    if not user or not user.password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    if not _verify_password(request.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    token, expires_in = _create_token(str(user.id))
+    _set_session_cookie(response, token, expires_in)
+    return TokenResponse(access_token=token, expires_in=expires_in)
 
 
 @router.post("/apple", response_model=TokenResponse)

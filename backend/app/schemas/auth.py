@@ -1,10 +1,21 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class AppleSignInRequest(BaseModel):
     identity_token: str
     authorization_code: str
     full_name: str | None = None
+
+
+class SignupRequest(BaseModel):
+    email: str = Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str = Field(min_length=8, max_length=128)
+    display_name: str = Field(min_length=1, max_length=255)
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str
 
 
 class TokenResponse(BaseModel):

@@ -23,7 +23,8 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    apple_sub: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    apple_sub: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     display_name: Mapped[str] = mapped_column(String(255), default="User")
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     communication_style: Mapped[CommunicationStyle] = mapped_column(
