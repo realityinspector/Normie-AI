@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import AppleSignInRequest, LoginRequest, SignupRequest, TokenResponse
+from app.schemas.auth import AppleSignInRequest, GoogleSignInRequest, LoginRequest, SignupRequest, TokenResponse
 from app.services.apple_auth import verify_apple_identity_token
 
 router = APIRouter()
@@ -137,6 +137,82 @@ async def apple_sign_in(
         await db.flush()
 
     token, expires_in = _create_token(str(user.id))
+    return TokenResponse(access_token=token, expires_in=expires_in)
+
+
+@router.post("/google", response_model=TokenResponse)
+async def google_sign_in(
+    request: GoogleSignInRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """Exchange a Google ID token for an app JWT + session cookie."""
+    import httpx
+
+    settings = get_settings()
+    if not settings.google_client_id:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Google Sign-In is not configured",
+        )
+
+    # Verify the ID token with Google's tokeninfo endpoint
+    async with httpx.AsyncClient() as client:
+        google_resp = await client.get(
+            "https://oauth2.googleapis.com/tokeninfo",
+            params={"id_token": request.credential},
+        )
+
+    if google_resp.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Google ID token",
+        )
+
+    token_info = google_resp.json()
+
+    # Verify the token was issued for our client ID
+    if token_info.get("aud") != settings.google_client_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google token audience mismatch",
+        )
+
+    google_sub = token_info.get("sub")
+    email = token_info.get("email")
+    name = token_info.get("name", "User")
+
+    if not google_sub or not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google token missing required claims",
+        )
+
+    # Try to find user by google_sub first
+    result = await db.execute(select(User).where(User.google_sub == google_sub))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        # Try to find by email (link existing account)
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+        if user:
+            # Link Google identity to existing account
+            user.google_sub = google_sub
+        else:
+            # Create new user
+            user = User(
+                google_sub=google_sub,
+                display_name=name,
+                email=email,
+                credit_balance=settings.initial_credits,
+            )
+            db.add(user)
+
+    await db.flush()
+
+    token, expires_in = _create_token(str(user.id))
+    _set_session_cookie(response, token, expires_in)
     return TokenResponse(access_token=token, expires_in=expires_in)
 
 

@@ -1,7 +1,65 @@
 /**
- * Alpine.js components for login and signup form handling.
- * Posts to /auth/login and /auth/signup API endpoints.
+ * Alpine.js components for login, signup, and Google Sign-In form handling.
+ * Posts to /auth/login, /auth/signup, and /auth/google API endpoints.
  */
+
+/**
+ * Global callback for Google Sign-In credential response.
+ * Delegates to the Alpine.js googleSignIn component.
+ */
+function handleGoogleCredentialResponse(response) {
+  // Dispatch a custom event so the Alpine component can handle it
+  window.dispatchEvent(
+    new CustomEvent("google-credential", { detail: response })
+  );
+}
+
+/**
+ * Alpine.js component for Google Sign-In.
+ */
+function googleSignIn(clientId) {
+  return {
+    googleError: "",
+    clientId: clientId,
+
+    init() {
+      // Listen for the Google credential response
+      window.addEventListener("google-credential", (e) => {
+        this.handleCredential(e.detail);
+      });
+    },
+
+    async handleCredential(response) {
+      this.googleError = "";
+
+      if (!response.credential) {
+        this.googleError = "Google Sign-In failed. Please try again.";
+        return;
+      }
+
+      try {
+        const res = await fetch("/auth/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credential: response.credential }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          this.googleError =
+            (data && data.detail) ||
+            "Google Sign-In failed. Please try again.";
+          return;
+        }
+
+        // Success — redirect to app
+        window.location.href = "/app";
+      } catch (err) {
+        this.googleError = "Network error. Please check your connection.";
+      }
+    },
+  };
+}
 
 function loginForm() {
   return {

@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     jwt_expiry_hours: int = 24 * 30  # 30 days
     apple_team_id: str = ""
     apple_bundle_id: str = "com.normalaizer.app"
+    google_client_id: str = ""
     # Credits given to new users
     initial_credits: int = 50
     # Base URL for the application (used for OG tags, share links, etc.)

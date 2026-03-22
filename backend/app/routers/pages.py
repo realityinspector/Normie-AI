@@ -60,13 +60,21 @@ async def developers(request: Request, user: User = Depends(get_current_user)):
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     """Login page with email/password form."""
-    return templates.TemplateResponse("pages/login.html", {"request": request})
+    settings = get_settings()
+    return templates.TemplateResponse(
+        "pages/login.html",
+        {"request": request, "google_client_id": settings.google_client_id},
+    )
 
 
 @router.get("/signup", response_class=HTMLResponse)
 async def signup_page(request: Request):
     """Signup page with registration form."""
-    return templates.TemplateResponse("pages/signup.html", {"request": request})
+    settings = get_settings()
+    return templates.TemplateResponse(
+        "pages/signup.html",
+        {"request": request, "google_client_id": settings.google_client_id},
+    )
 
 
 @router.get("/app", response_class=HTMLResponse)

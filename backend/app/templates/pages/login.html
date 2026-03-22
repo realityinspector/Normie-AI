@@ -4,6 +4,9 @@
 
 {% block head %}
 <script src="/static/js/auth.js" defer></script>
+{% if google_client_id %}
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -59,7 +62,28 @@
     <div class="flex-1 border-t border-gray-200"></div>
   </div>
 
-  <!-- Google Sign-In placeholder -->
+  <!-- Google Sign-In -->
+  {% if google_client_id %}
+  <div x-data="googleSignIn('{{ google_client_id }}')">
+    <div x-show="googleError" x-transition
+         class="mb-3 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
+         x-text="googleError"></div>
+    <div id="g_id_onload"
+         data-client_id="{{ google_client_id }}"
+         data-callback="handleGoogleCredentialResponse"
+         data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin"
+         data-type="standard"
+         data-shape="rectangular"
+         data-theme="outline"
+         data-text="signin_with"
+         data-size="large"
+         data-logo_alignment="left"
+         data-width="400">
+    </div>
+  </div>
+  {% else %}
   <button disabled
           class="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-gray-300 text-gray-400 font-semibold text-sm cursor-not-allowed">
     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -70,6 +94,7 @@
     </svg>
     <span>Sign in with Google (coming soon)</span>
   </button>
+  {% endif %}
 
   <!-- Link to signup -->
   <p class="mt-8 text-center text-sm text-gray-500">
