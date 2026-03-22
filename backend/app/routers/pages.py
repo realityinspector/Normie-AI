@@ -6,9 +6,15 @@ import uuid
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 import jwt as pyjwt
 
 from app.config import get_settings
+from app.database import async_session
+from app.models.transcript import Transcript
+from app.models.message import Message
+from app.models.room import Room, RoomParticipant
 
 from app.middleware.auth import get_current_user
 from app.models.user import User
@@ -103,7 +109,6 @@ async def app_room_page(request: Request, room_id: uuid.UUID):
 async def _get_display_name(user_id_str: str) -> str:
     """Fetch user display name from the database."""
     from sqlalchemy import select
-    from app.database import async_session
     from app.models.user import User
 
     try:
@@ -114,3 +119,81 @@ async def _get_display_name(user_id_str: str) -> str:
             return row or "User"
     except Exception:
         return "User"
+
+
+# ─── Share Pages ───
+
+
+@router.get("/t/{slug}", response_class=HTMLResponse)
+async def public_transcript(request: Request, slug: str):
+    """Public transcript view with OG meta tags for social sharing."""
+    settings = get_settings()
+
+    async with async_session() as db:
+        # Fetch transcript by slug
+        result = await db.execute(select(Transcript).where(Transcript.slug == slug))
+        transcript = result.scalar_one_or_none()
+
+        if not transcript:
+            return HTMLResponse(
+                content="<h1>Transcript not found</h1><p><a href='/'>Go home</a></p>",
+                status_code=404,
+            )
+
+        # Fetch messages with sender info
+        msg_result = await db.execute(
+            select(Message)
+            .where(Message.room_id == transcript.room_id)
+            .order_by(Message.created_at.asc())
+            .options(selectinload(Message.sender))
+        )
+        messages_raw = msg_result.scalars().all()
+
+        messages = []
+        for msg in messages_raw:
+            messages.append({
+                "sender_name": msg.sender.display_name if msg.sender else "Unknown",
+                "sender_id": str(msg.sender_id),
+                "original_text": msg.original_text,
+                "created_at": msg.created_at,
+                "is_owner": str(msg.sender_id) == str(transcript.user_id),
+            })
+
+    return templates.TemplateResponse("share/transcript.html", {
+        "request": request,
+        "transcript": transcript,
+        "messages": messages,
+        "base_url": settings.base_url.rstrip("/"),
+    })
+
+
+@router.get("/r/{room_id}/invite", response_class=HTMLResponse)
+async def room_invite(request: Request, room_id: uuid.UUID):
+    """Room invite page with OG meta tags for social sharing."""
+    settings = get_settings()
+
+    async with async_session() as db:
+        # Fetch room
+        result = await db.execute(select(Room).where(Room.id == room_id))
+        room = result.scalar_one_or_none()
+
+        if not room:
+            return HTMLResponse(
+                content="<h1>Room not found</h1><p><a href='/'>Go home</a></p>",
+                status_code=404,
+            )
+
+        # Count participants
+        count_result = await db.execute(
+            select(func.count())
+            .select_from(RoomParticipant)
+            .where(RoomParticipant.room_id == room_id)
+        )
+        participant_count = count_result.scalar() or 0
+
+    return templates.TemplateResponse("share/room_invite.html", {
+        "request": request,
+        "room": room,
+        "participant_count": participant_count,
+        "base_url": settings.base_url.rstrip("/"),
+    })

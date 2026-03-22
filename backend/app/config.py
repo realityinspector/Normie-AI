@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     apple_bundle_id: str = "com.normalaizer.app"
     # Credits given to new users
     initial_credits: int = 50
+    # Base URL for the application (used for OG tags, share links, etc.)
+    base_url: str = "http://localhost:8000"
     # Set to "true" to enable /auth/dev endpoint (disable in production!)
     dev_auth_enabled: str = "true"
     # Stripe

@@ -41,6 +41,12 @@ function chatApp(token, userId, displayName, initialRoomId) {
     newRoomPublic: false,
     creatingRoom: false,
 
+    // Share
+    showShareModal: false,
+    shareLink: '',
+    shareCopied: false,
+    creatingTranscript: false,
+
     // Typing
     typingUsers: [],
     typingTimer: null,
@@ -367,6 +373,52 @@ function chatApp(token, userId, displayName, initialRoomId) {
     showError(msg) {
       this.errorMsg = msg;
       setTimeout(() => { this.errorMsg = ''; }, 4000);
+    },
+
+    // ─── Share Transcript ───
+
+    async shareConversation() {
+      if (!this.currentRoomId || this.creatingTranscript) return;
+
+      this.creatingTranscript = true;
+      this.shareCopied = false;
+      try {
+        const res = await fetch('/transcripts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + this.token,
+          },
+          body: JSON.stringify({ room_id: this.currentRoomId }),
+        });
+        if (!res.ok) throw new Error('Failed to create transcript');
+        const data = await res.json();
+        this.shareLink = window.location.origin + '/t/' + data.slug;
+        this.showShareModal = true;
+      } catch (e) {
+        this.showError('Could not create share link');
+        console.error(e);
+      } finally {
+        this.creatingTranscript = false;
+      }
+    },
+
+    async copyShareLink() {
+      try {
+        await navigator.clipboard.writeText(this.shareLink);
+        this.shareCopied = true;
+        setTimeout(() => { this.shareCopied = false; }, 2000);
+      } catch {
+        // Fallback for older browsers
+        const input = document.createElement('input');
+        input.value = this.shareLink;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        this.shareCopied = true;
+        setTimeout(() => { this.shareCopied = false; }, 2000);
+      }
     },
 
     // Alpine $screen helper workaround for sidebar
