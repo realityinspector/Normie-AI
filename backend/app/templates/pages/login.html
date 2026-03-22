@@ -30,8 +30,8 @@
 
     <!-- Email -->
     <div>
-      <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-      <input id="email" type="email" x-model="email" required
+      <label for="input-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+      <input id="input-email" name="email" type="email" x-model="email" required
              class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
              placeholder="you@example.com" />
       <p x-show="errors.email" x-text="errors.email" class="mt-1 text-xs text-red-600"></p>
@@ -39,8 +39,8 @@
 
     <!-- Password -->
     <div>
-      <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-      <input id="password" type="password" x-model="password" required
+      <label for="input-password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+      <input id="input-password" name="password" type="password" x-model="password" required
              class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
              placeholder="Your password" />
       <p x-show="errors.password" x-text="errors.password" class="mt-1 text-xs text-red-600"></p>
