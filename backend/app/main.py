@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.routers import auth, users, rooms, messages, translate, transcripts, credits, ws, pages, api_v1, stripe_webhooks
+from app.routers import auth, users, rooms, messages, translate, transcripts, credits, ws, pages, api_v1, stripe_webhooks, stripe_checkout
 from app.routers.integrations import router as integrations_router
 
 # Resolve paths relative to this file
@@ -49,6 +49,7 @@ app.include_router(transcripts.router, prefix="/transcripts", tags=["transcripts
 app.include_router(credits.router, prefix="/credits", tags=["credits"])
 app.include_router(ws.router, tags=["websocket"])
 app.include_router(stripe_webhooks.router, tags=["stripe"])
+app.include_router(stripe_checkout.router, prefix="/stripe", tags=["stripe"])
 app.include_router(api_v1.router, prefix="/api/v1", tags=["developer-api"])
 app.include_router(integrations_router, prefix="/integrations", tags=["integrations"])
 

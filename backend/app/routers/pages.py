@@ -25,6 +25,13 @@ router = APIRouter()
 templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
 
 
+# ---------------------------------------------------------------------------
+# Stripe price IDs – replace with your actual Stripe Price IDs
+# ---------------------------------------------------------------------------
+MONTHLY_PRICE_ID = "price_monthly_placeholder"
+YEARLY_PRICE_ID = "price_yearly_placeholder"
+
+
 def _get_session_user(request: Request) -> dict | None:
     """Extract user info from the session cookie JWT. Returns None if invalid."""
     token = request.cookies.get("session")
@@ -127,6 +134,55 @@ async def _get_display_name(user_id_str: str) -> str:
             return row or "User"
     except Exception:
         return "User"
+
+
+async def _get_user_by_id(user_id_str: str) -> User | None:
+    """Fetch a full User object from the database by ID."""
+    from sqlalchemy import select
+    from app.database import async_session
+
+    try:
+        uid = uuid.UUID(user_id_str)
+        async with async_session() as db:
+            result = await db.execute(select(User).where(User.id == uid))
+            return result.scalar_one_or_none()
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Pricing page (public)
+# ---------------------------------------------------------------------------
+
+@router.get("/pricing", response_class=HTMLResponse)
+async def pricing_page(request: Request):
+    """Subscription pricing page with plan selection and checkout."""
+    return templates.TemplateResponse("pages/pricing.html", {
+        "request": request,
+        "monthly_price_id": MONTHLY_PRICE_ID,
+        "yearly_price_id": YEARLY_PRICE_ID,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Settings page (auth required)
+# ---------------------------------------------------------------------------
+
+@router.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    """User settings page with profile, subscription, and referral info."""
+    session = _get_session_user(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=302)
+
+    user = await _get_user_by_id(session["user_id"])
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+
+    return templates.TemplateResponse("pages/settings.html", {
+        "request": request,
+        "user": user,
+    })
 
 
 # ─── Share Pages ───

@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}NORMALAIZER – Pricing{% endblock %}
+
+{% block head %}
+<style>
+  [x-cloak] { display: none !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "partials/header.html" %}
+
+<main x-data="pricingPage()" x-cloak class="pb-10">
+
+  <!-- Page Header -->
+  <section class="px-5 pt-8 pb-6 text-center">
+    <p class="inline-block px-3 py-1 text-xs font-semibold tracking-wide text-indigo-700 bg-indigo-50 rounded-full mb-3">
+      Simple Pricing
+    </p>
+    <h1 class="text-2xl font-extrabold tracking-tight text-gray-900">
+      Choose your plan
+    </h1>
+    <p class="mt-2 text-sm text-gray-500 leading-relaxed">
+      Start with 50 free translations. Upgrade when you need more.
+    </p>
+  </section>
+
+  <!-- Billing Toggle -->
+  <div class="flex items-center justify-center gap-3 px-5 mb-6">
+    <span class="text-sm font-medium" :class="billing === 'monthly' ? 'text-gray-900' : 'text-gray-400'">Monthly</span>
+    <button @click="billing = billing === 'monthly' ? 'yearly' : 'monthly'"
+            class="relative w-12 h-6 rounded-full transition-colors"
+            :class="billing === 'yearly' ? 'bg-indigo-600' : 'bg-gray-300'">
+      <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform"
+            :class="billing === 'yearly' ? 'translate-x-6' : ''"></span>
+    </button>
+    <span class="text-sm font-medium" :class="billing === 'yearly' ? 'text-gray-900' : 'text-gray-400'">
+      Yearly
+      <span class="text-xs text-emerald-600 font-semibold">Save 20%</span>
+    </span>
+  </div>
+
+  <!-- Free Tier Callout -->
+  <div class="mx-5 mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+    <div class="flex items-start gap-3">
+      <span class="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 text-lg">🧠</span>
+      <div>
+        <h3 class="font-semibold text-sm text-emerald-900">Free for neurodivergent users</h3>
+        <p class="text-xs text-emerald-700 mt-1 leading-relaxed">
+          If you identify as neurodivergent, NORMALAIZER is free. Set your communication style to "autistic" in settings for unlimited access.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pricing Cards -->
+  <div class="px-5 space-y-4">
+
+    <!-- Free Plan -->
+    <div class="border border-gray-200 rounded-xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-bold text-gray-900">Free</h3>
+        <span class="px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">Starter</span>
+      </div>
+      <div class="mb-4">
+        <span class="text-3xl font-extrabold text-gray-900">$0</span>
+        <span class="text-sm text-gray-500">/forever</span>
+      </div>
+      <ul class="space-y-2 mb-5">
+        <li class="flex items-center gap-2 text-sm text-gray-600">
+          <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          50 translation credits
+        </li>
+        <li class="flex items-center gap-2 text-sm text-gray-600">
+          <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          All communication templates
+        </li>
+        <li class="flex items-center gap-2 text-sm text-gray-600">
+          <svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          Chat rooms
+        </li>
+      </ul>
+      <a href="/signup"
+         class="block w-full text-center px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition">
+        Get Started
+      </a>
+    </div>
+
+    <!-- Pro Plan -->
+    <div class="border-2 border-indigo-500 rounded-xl p-5 relative">
+      <span class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 text-xs font-bold bg-indigo-600 text-white rounded-full">
+        Most Popular
+      </span>
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-bold text-gray-900">Pro</h3>
+        <span class="px-2.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded-full">Unlimited</span>
+      </div>
+      <div class="mb-4">
+        <span class="text-3xl font-extrabold text-gray-900" x-text="billing === 'monthly' ? '$9.99' : '$7.99'"></span>
+        <span class="text-sm text-gray-500" x-text="billing === 'monthly' ? '/month' : '/month'"></span>
+        <p x-show="billing === 'yearly'" class="text-xs text-emerald-600 font-medium mt-0.5">
+          $95.88/year (billed annually)
+        </p>
+      </div>
+      <ul class="space-y-2 mb-5">
+        <li class="flex items-center gap-2 text-sm text-gray-600">
+          <svg class="w-4 h-4 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          <strong>Unlimited</strong> translations
+        </li>
+        <li class="flex items-center gap-2 text-sm text-gray-600">
+          <svg class="w-4 h-4 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          All communication templates
+        </li>
+        <li class="flex items-center gap-2 text-sm text-gray-600">
+          <svg class="w-4 h-4 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          Developer API access
+        </li>
+        <li class="flex items-center gap-2 text-sm text-gray-600">
+          <svg class="w-4 h-4 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          Integrations (Slack, Discord, Telegram)
+        </li>
+        <li class="flex items-center gap-2 text-sm text-gray-600">
+          <svg class="w-4 h-4 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          Priority support
+        </li>
+      </ul>
+      <button @click="checkout(billing === 'monthly' ? monthlyPriceId : yearlyPriceId)"
+              :disabled="loading"
+              class="block w-full text-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-sm shadow-md hover:bg-indigo-700 transition disabled:opacity-50">
+        <span x-show="!loading">Subscribe Now</span>
+        <span x-show="loading">Redirecting...</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Error message -->
+  <div x-show="error" x-transition class="mx-5 mt-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+    <p class="text-xs text-red-700" x-text="error"></p>
+  </div>
+
+  <!-- Referral Section -->
+  <section class="px-5 pt-8">
+    <div class="border-t border-gray-100 pt-6 text-center">
+      <h3 class="text-sm font-bold text-gray-900 mb-1">Refer a friend</h3>
+      <p class="text-xs text-gray-500 mb-4">Get 1 free month of Pro when someone signs up with your referral code.</p>
+      <a href="/settings" class="text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition">
+        Get your referral code &rarr;
+      </a>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="px-5 pt-8 pb-4">
+    <h2 class="text-lg font-bold text-gray-900 mb-4 text-center">FAQ</h2>
+    <div class="space-y-3">
+      <div class="border border-gray-200 rounded-xl p-4">
+        <h4 class="font-semibold text-sm text-gray-900">Can I cancel anytime?</h4>
+        <p class="text-xs text-gray-500 mt-1 leading-relaxed">
+          Yes! You can cancel your subscription at any time from your settings page. You'll keep access until the end of your billing period.
+        </p>
+      </div>
+      <div class="border border-gray-200 rounded-xl p-4">
+        <h4 class="font-semibold text-sm text-gray-900">What counts as a translation?</h4>
+        <p class="text-xs text-gray-500 mt-1 leading-relaxed">
+          Each message translated in a chat room or via the API counts as one credit. Pro subscribers get unlimited translations.
+        </p>
+      </div>
+      <div class="border border-gray-200 rounded-xl p-4">
+        <h4 class="font-semibold text-sm text-gray-900">Is it really free for neurodivergent users?</h4>
+        <p class="text-xs text-gray-500 mt-1 leading-relaxed">
+          Yes! We believe communication tools should be accessible. Set your communication style to "autistic" and enjoy unlimited access at no cost.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-gray-100 mx-5 mt-6 pt-6 pb-4 text-center">
+    <p class="text-xs text-gray-400">&copy; 2026 NORMALAIZER. All rights reserved.</p>
+  </footer>
+
+</main>
+
+<script>
+function pricingPage() {
+  return {
+    billing: 'monthly',
+    loading: false,
+    error: null,
+    // These should be configured as Stripe Price IDs in your Stripe dashboard
+    monthlyPriceId: '{{ monthly_price_id }}',
+    yearlyPriceId: '{{ yearly_price_id }}',
+
+    async checkout(priceId) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const resp = await fetch('/stripe/create-checkout-session', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ price_id: priceId }),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          window.location.href = data.url;
+        } else if (resp.status === 401) {
+          // Not logged in — redirect to login
+          window.location.href = '/login?next=/pricing';
+        } else {
+          const err = await resp.json();
+          this.error = err.detail || 'Something went wrong. Please try again.';
+        }
+      } catch (e) {
+        this.error = 'Network error. Please check your connection and try again.';
+      }
+      this.loading = false;
+    },
+  };
+}
+</script>
+
+{% endblock %}
