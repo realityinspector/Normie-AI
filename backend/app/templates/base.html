@@ -14,6 +14,14 @@
   <!-- App CSS -->
   <link rel="stylesheet" href="/static/css/app.css" />
 
+  <!-- OG Meta Tags (defaults, override via blocks) -->
+  <meta property="og:site_name" content="NORMALAIZER">
+  <meta property="og:type" content="website">
+  {% block og_title %}<meta property="og:title" content="NORMALAIZER – AI Communication Bridge">{% endblock %}
+  {% block og_description %}<meta property="og:description" content="Real-time AI translation between neurotypical and neurodivergent communication styles.">{% endblock %}
+  {% block og_image %}<meta property="og:image" content="/static/img/og-default.png">{% endblock %}
+  <meta name="twitter:card" content="summary_large_image">
+
   {% block head %}{% endblock %}
 </head>
 <body class="bg-gray-100 min-h-screen flex items-start justify-center">
