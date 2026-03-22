@@ -46,7 +46,7 @@ with your app's Signing Secret.
 
 from fastapi import APIRouter, Request
 
-from .base import raise_not_implemented
+from fastapi import HTTPException, status
 
 router = APIRouter(prefix="/slack", tags=["integrations-slack"])
 
@@ -62,7 +62,10 @@ async def slack_webhook(request: Request):
     - Process message events for translation
     - Respond within 3 seconds (defer heavy work to background task)
     """
-    raise_not_implemented("Slack")
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Slack integration not yet implemented. See /developers for API access.",
+    )
 
 
 @router.post("/command")
@@ -76,4 +79,7 @@ async def slack_command(request: Request):
     - Return immediate response (ephemeral or in-channel)
     - Use response_url for deferred responses if needed
     """
-    raise_not_implemented("Slack")
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Slack integration not yet implemented. See /developers for API access.",
+    )

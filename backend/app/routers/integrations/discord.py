@@ -44,7 +44,7 @@ modals) to a single Interactions Endpoint URL via HTTP POST.
 
 from fastapi import APIRouter, Request
 
-from .base import raise_not_implemented
+from fastapi import HTTPException, status
 
 router = APIRouter(prefix="/discord", tags=["integrations-discord"])
 
@@ -61,4 +61,7 @@ async def discord_webhook(request: Request):
     - Return interaction responses within 3 seconds
     - Use deferred responses + followup for longer operations
     """
-    raise_not_implemented("Discord")
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Discord integration not yet implemented. See /developers for API access.",
+    )

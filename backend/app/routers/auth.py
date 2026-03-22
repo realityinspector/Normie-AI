@@ -1,5 +1,8 @@
+import logging
+import time
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 import bcrypt
 import jwt
 from sqlalchemy import select
@@ -9,6 +12,25 @@ from app.database import get_db
 from app.models.user import User
 from app.schemas.auth import AppleSignInRequest, GoogleSignInRequest, LoginRequest, SignupRequest, TokenResponse
 from app.services.apple_auth import verify_apple_identity_token
+
+logger = logging.getLogger(__name__)
+
+# Simple in-memory rate limiter for auth endpoints
+_auth_rate_limits: dict[str, list[float]] = defaultdict(list)
+_AUTH_RATE_LIMIT = 10  # max requests
+_AUTH_RATE_WINDOW = 60  # per 60 seconds
+
+
+def _check_rate_limit(ip: str) -> bool:
+    """Returns True if request is allowed, False if rate limited."""
+    now = time.time()
+    # Clean old entries
+    _auth_rate_limits[ip] = [t for t in _auth_rate_limits[ip] if now - t < _AUTH_RATE_WINDOW]
+    if len(_auth_rate_limits[ip]) >= _AUTH_RATE_LIMIT:
+        return False
+    _auth_rate_limits[ip].append(now)
+    return True
+
 
 router = APIRouter()
 
@@ -48,13 +70,18 @@ def _verify_password(password: str, password_hash: str) -> bool:
 
 @router.post("/signup", response_model=TokenResponse)
 async def signup(
-    request: SignupRequest,
+    body: SignupRequest,
+    request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new user with email and password."""
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(client_ip):
+        raise HTTPException(status_code=429, detail="Too many requests. Try again in a minute.")
+
     # Check if email already exists
-    result = await db.execute(select(User).where(User.email == request.email))
+    result = await db.execute(select(User).where(User.email == body.email))
     existing_user = result.scalar_one_or_none()
     if existing_user:
         raise HTTPException(
@@ -64,9 +91,9 @@ async def signup(
 
     settings = get_settings()
     user = User(
-        display_name=request.display_name,
-        email=request.email,
-        password_hash=_hash_password(request.password),
+        display_name=body.display_name,
+        email=body.email,
+        password_hash=_hash_password(body.password),
         credit_balance=settings.initial_credits,
     )
     db.add(user)
@@ -79,12 +106,17 @@ async def signup(
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
-    request: LoginRequest,
+    body: LoginRequest,
+    request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
 ):
     """Authenticate with email and password."""
-    result = await db.execute(select(User).where(User.email == request.email))
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(client_ip):
+        raise HTTPException(status_code=429, detail="Too many requests. Try again in a minute.")
+
+    result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
 
     if not user or not user.password_hash:
@@ -93,7 +125,7 @@ async def login(
             detail="Invalid email or password",
         )
 
-    if not _verify_password(request.password, user.password_hash):
+    if not _verify_password(body.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -227,27 +259,33 @@ class DevSignInRequest(BaseModel):
 
 @router.post("/dev", response_model=TokenResponse)
 async def dev_sign_in(
-    request: DevSignInRequest,
+    body: DevSignInRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """DEV ONLY: Create a test user without Apple Sign-In. Gated by DEV_AUTH_ENABLED env var."""
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(client_ip):
+        raise HTTPException(status_code=429, detail="Too many requests. Try again in a minute.")
+
     settings = get_settings()
     if settings.dev_auth_enabled != "true":
         raise HTTPException(status_code=404, detail="Not found")
+    logger.warning("DEV AUTH ENDPOINT IS ENABLED — DO NOT USE IN PRODUCTION")
     import hashlib
-    fake_sub = "dev_" + hashlib.sha256(request.name.encode()).hexdigest()[:16]
+    fake_sub = "dev_" + hashlib.sha256(body.name.encode()).hexdigest()[:16]
 
     result = await db.execute(select(User).where(User.apple_sub == fake_sub))
     user = result.scalar_one_or_none()
 
     if not user:
         from app.models.user import CommunicationStyle
-        style = CommunicationStyle.autistic if request.communication_style == "autistic" else CommunicationStyle.neurotypical
+        style = CommunicationStyle.autistic if body.communication_style == "autistic" else CommunicationStyle.neurotypical
         settings = get_settings()
         user = User(
             apple_sub=fake_sub,
-            display_name=request.name,
-            email=f"{request.name.lower().replace(' ', '.')}@test.dev",
+            display_name=body.name,
+            email=f"{body.name.lower().replace(' ', '.')}@test.dev",
             communication_style=style,
             credit_balance=settings.initial_credits,
         )

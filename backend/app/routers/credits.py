@@ -14,6 +14,9 @@ from app.schemas.credits import (
 )
 from app.services.credit_manager import add_credits
 from app.models.credit import TransactionType
+import logging
+
+logger = logging.getLogger("normalaizer")
 
 router = APIRouter()
 
@@ -76,7 +79,10 @@ async def verify_purchase(
     if not months and not credit_amount:
         raise HTTPException(status_code=400, detail="Unknown product ID")
 
-    # TODO: In production, verify JWS signature against Apple's certificate chain
+    # ⚠️ MOCK: Apple StoreKit JWS signature is NOT verified
+    # This is NOT safe for production App Store purchases
+    # TODO: Implement proper JWS verification against Apple's certificate chain
+    logger.warning("MOCK: Apple StoreKit JWS signature NOT verified — do not use for real purchases")
 
     if months:
         # New subscription model: extend subscription

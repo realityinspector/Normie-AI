@@ -47,7 +47,7 @@ When using webhooks, Telegram sends JSON POST requests to your endpoint.
 
 from fastapi import APIRouter, Request
 
-from .base import raise_not_implemented
+from fastapi import HTTPException, status
 
 router = APIRouter(prefix="/telegram", tags=["integrations-telegram"])
 
@@ -65,4 +65,7 @@ async def telegram_webhook(request: Request):
     - Respond via Telegram Bot API (sendMessage)
     - Handle inline queries for inline translation
     """
-    raise_not_implemented("Telegram")
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Telegram integration not yet implemented. See /developers for API access.",
+    )
