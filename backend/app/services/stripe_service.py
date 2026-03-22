@@ -11,11 +11,15 @@ from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
+# Stripe API timeout (seconds)
+STRIPE_TIMEOUT = 30
+
 
 def _configure_stripe() -> None:
-    """Set the Stripe API key from settings."""
+    """Set the Stripe API key and timeout from settings."""
     settings = get_settings()
     stripe.api_key = settings.stripe_secret_key
+    stripe.max_network_retries = 2
 
 
 async def create_checkout_session(
@@ -31,22 +35,32 @@ async def create_checkout_session(
 
     # Ensure user has a Stripe customer
     if not user.stripe_customer_id:
-        customer = stripe.Customer.create(
-            email=user.email,
-            metadata={"user_id": str(user.id)},
-        )
+        try:
+            customer = stripe.Customer.create(
+                email=user.email,
+                metadata={"user_id": str(user.id)},
+                timeout=STRIPE_TIMEOUT,
+            )
+        except stripe.StripeError as exc:
+            logger.error("Stripe customer creation failed for user %s: %s", user.id, str(exc))
+            raise RuntimeError("Payment service temporarily unavailable. Please try again.") from exc
         user.stripe_customer_id = customer.id
         await db.flush()
 
-    session = stripe.checkout.Session.create(
-        customer=user.stripe_customer_id,
-        payment_method_types=["card"],
-        mode="subscription",
-        line_items=[{"price": price_id, "quantity": 1}],
-        success_url=f"{settings.base_url}/settings?session_id={{CHECKOUT_SESSION_ID}}",
-        cancel_url=f"{settings.base_url}/pricing",
-        metadata={"user_id": str(user.id)},
-    )
+    try:
+        session = stripe.checkout.Session.create(
+            customer=user.stripe_customer_id,
+            payment_method_types=["card"],
+            mode="subscription",
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=f"{settings.base_url}/settings?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{settings.base_url}/pricing",
+            metadata={"user_id": str(user.id)},
+            timeout=STRIPE_TIMEOUT,
+        )
+    except stripe.StripeError as exc:
+        logger.error("Stripe checkout session creation failed for user %s: %s", user.id, str(exc))
+        raise RuntimeError("Payment service temporarily unavailable. Please try again.") from exc
     return session
 
 
@@ -58,10 +72,19 @@ async def create_customer_portal_session(user: User) -> stripe.billing_portal.Se
     if not user.stripe_customer_id:
         raise ValueError("User does not have a Stripe customer ID")
 
-    session = stripe.billing_portal.Session.create(
-        customer=user.stripe_customer_id,
-        return_url=f"{settings.base_url}/settings",
-    )
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=user.stripe_customer_id,
+            return_url=f"{settings.base_url}/settings",
+            timeout=STRIPE_TIMEOUT,
+        )
+    except stripe.StripeError as exc:
+        logger.error(
+            "Stripe portal session creation failed for user %s: %s",
+            user.id,
+            str(exc),
+        )
+        raise RuntimeError("Payment service temporarily unavailable. Please try again.") from exc
     return session
 
 

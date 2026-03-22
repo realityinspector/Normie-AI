@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.middleware.auth import get_current_user
@@ -11,6 +13,8 @@ from app.schemas.translate import (
 )
 from app.services.claude_translate import translate_text, extract_and_translate_image
 from app.services.credit_manager import check_access
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -32,9 +36,16 @@ async def translate_text_endpoint(
     await check_access(db, user)
     sender_style, recipient_style = _direction_to_styles(body.direction)
 
-    translated = await translate_text(
-        body.text, sender_style, recipient_style, body.template, body.custom_prompt
-    )
+    try:
+        translated = await translate_text(
+            body.text, sender_style, recipient_style, body.template, body.custom_prompt
+        )
+    except Exception as exc:
+        logger.error("Translation failed for user %s: %s", user.id, str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Translation service temporarily unavailable. Please try again.",
+        )
 
     return TranslateTextResponse(
         original_text=body.text,
@@ -58,9 +69,16 @@ async def translate_image_endpoint(
     image_bytes = await image.read()
     media_type = image.content_type or "image/jpeg"
 
-    extracted, translated = await extract_and_translate_image(
-        image_bytes, media_type, sender_style, recipient_style, template
-    )
+    try:
+        extracted, translated = await extract_and_translate_image(
+            image_bytes, media_type, sender_style, recipient_style, template
+        )
+    except Exception as exc:
+        logger.error("Image translation failed for user %s: %s", user.id, str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Translation service temporarily unavailable. Please try again.",
+        )
 
     return TranslateImageResponse(
         extracted_text=extracted,

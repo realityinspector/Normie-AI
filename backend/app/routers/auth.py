@@ -223,10 +223,23 @@ async def google_sign_in(
         )
 
     # Verify the ID token with Google's tokeninfo endpoint
-    async with httpx.AsyncClient() as client:
-        google_resp = await client.get(
-            "https://oauth2.googleapis.com/tokeninfo",
-            params={"id_token": request.credential},
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            google_resp = await client.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": request.credential},
+            )
+    except httpx.TimeoutException:
+        logger.error("Google token verification timed out")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google sign-in temporarily unavailable, please try again",
+        )
+    except httpx.HTTPError as exc:
+        logger.error("Google token verification failed: %s", str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google sign-in temporarily unavailable, please try again",
         )
 
     if google_resp.status_code != 200:
