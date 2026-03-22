@@ -11,7 +11,8 @@ async def check_access(db: AsyncSession, user: User) -> bool:
     """Check if user has access to the service.
 
     - Autistic (neurodivergent) users: always free.
-    - Neurotypical users: must have an active, non-expired subscription.
+    - Users with active, non-expired subscription: unlimited access.
+    - Users with credit_balance > 0: access granted (caller handles deduction).
     Raises HTTPException 402 if access is denied.
     """
     if user.communication_style == CommunicationStyle.autistic:
@@ -22,6 +23,9 @@ async def check_access(db: AsyncSession, user: User) -> bool:
         and user.subscription_expires_at is not None
         and user.subscription_expires_at > datetime.now(timezone.utc)
     ):
+        return True
+
+    if user.credit_balance > 0:
         return True
 
     raise HTTPException(

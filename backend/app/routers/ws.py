@@ -1,16 +1,17 @@
 import uuid
 import json
+from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 import jwt as pyjwt
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.config import get_settings
 from app.database import async_session
-from app.models.user import User
+from app.models.user import User, CommunicationStyle
 from app.models.room import Room, RoomParticipant
 from app.models.message import Message
 from app.services.claude_translate import translate_text
-from app.services.credit_manager import check_access
+from app.services.credit_manager import check_access, check_and_deduct
 from app.services.connection_manager import manager
 
 router = APIRouter()
@@ -92,12 +93,31 @@ async def chat_websocket(
 
                 async with async_session() as db:
                     try:
-                        # Check subscription / free access
+                        # Check subscription / free access / credits
                         user_result2 = await db.execute(
                             select(User).where(User.id == user_id)
                         )
                         current_user = user_result2.scalar_one()
                         await check_access(db, current_user)
+
+                        # Deduct 1 credit for users without subscription or neurodivergent access
+                        has_subscription = (
+                            current_user.subscription_active
+                            and current_user.subscription_expires_at is not None
+                            and current_user.subscription_expires_at
+                            > datetime.now(timezone.utc)
+                        )
+                        is_neurodivergent = (
+                            current_user.communication_style
+                            == CommunicationStyle.autistic
+                        )
+                        if not has_subscription and not is_neurodivergent:
+                            await check_and_deduct(
+                                db,
+                                current_user.id,
+                                1,
+                                "Chat message credit usage",
+                            )
                     except Exception:
                         await manager.send_to_user(
                             room_id,
