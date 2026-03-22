@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.routers import auth, users, rooms, messages, translate, transcripts, credits, ws, api_v1
+from app.routers import auth, users, rooms, messages, translate, transcripts, credits, ws, pages, api_v1
 from app.routers.integrations import router as integrations_router
 
 # Resolve paths relative to this file
@@ -50,6 +50,9 @@ app.include_router(credits.router, prefix="/credits", tags=["credits"])
 app.include_router(ws.router, tags=["websocket"])
 app.include_router(api_v1.router, prefix="/api/v1", tags=["developer-api"])
 app.include_router(integrations_router, prefix="/integrations", tags=["integrations"])
+
+# --- Pages (HTML) router — mounted last, no prefix, so / serves the landing page ---
+app.include_router(pages.router, tags=["pages"])
 
 
 @app.get("/health")
