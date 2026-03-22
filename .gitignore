@@ -38,3 +38,4 @@ build/
 *.ipa
 *.dSYM.zip
 *.dSYM
+/.stoneforge/.worktrees/

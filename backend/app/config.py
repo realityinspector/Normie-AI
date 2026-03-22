@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     stripe_monthly_price_id: str = ""
     stripe_yearly_price_id: str = ""
+    cors_origins: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
