@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}NORMALIZER{% endblock %}</title>
+
+  <!-- Tailwind CSS v4 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <!-- Alpine.js v3 CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="/static/css/app.css" />
+
+  {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-100 min-h-screen flex items-start justify-center">
+
+  <!-- Phone-frame layout: full-width on mobile, centered card on desktop -->
+  <div class="w-full max-w-md mx-auto min-h-screen bg-white shadow-lg sm:shadow-xl">
+    {% block content %}{% endblock %}
+  </div>
+
+</body>
+</html>

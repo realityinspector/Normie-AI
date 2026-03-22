@@ -1,8 +1,18 @@
+import pathlib
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
 from app.routers import auth, users, rooms, messages, translate, transcripts, credits, ws
 from app.routers.integrations import router as integrations_router
+
+# Resolve paths relative to this file
+_APP_DIR = pathlib.Path(__file__).resolve().parent
+_STATIC_DIR = _APP_DIR / "static"
+_TEMPLATES_DIR = _APP_DIR / "templates"
 
 
 @asynccontextmanager
@@ -25,6 +35,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Static files & templates ---
+app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
+
+# --- API routers ---
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(rooms.router, prefix="/rooms", tags=["rooms"])
