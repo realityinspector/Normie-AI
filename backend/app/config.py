@@ -16,13 +16,13 @@ class Settings(BaseSettings):
     # Base URL for the application (used for OG tags, share links, etc.)
     base_url: str = "http://localhost:8000"
     # Set to "true" to enable /auth/dev endpoint (disable in production!)
-    dev_auth_enabled: str = "true"
+    dev_auth_enabled: str = "false"
     # Stripe
     stripe_secret_key: str = ""
     stripe_publishable_key: str = ""
     stripe_webhook_secret: str = ""
-    # Base URL for redirect URLs (e.g. https://normalaizer.com)
-    base_url: str = "http://localhost:8000"
+    stripe_monthly_price_id: str = ""
+    stripe_yearly_price_id: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

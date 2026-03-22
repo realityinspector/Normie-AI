@@ -125,12 +125,20 @@
           Priority support
         </li>
       </ul>
-      <button @click="checkout(billing === 'monthly' ? monthlyPriceId : yearlyPriceId)"
-              :disabled="loading"
-              class="block w-full text-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-sm shadow-md hover:bg-indigo-700 transition disabled:opacity-50">
-        <span x-show="!loading">Subscribe Now</span>
-        <span x-show="loading">Redirecting...</span>
-      </button>
+      <template x-if="paymentsAvailable">
+        <button @click="checkout(billing === 'monthly' ? monthlyPriceId : yearlyPriceId)"
+                :disabled="loading"
+                class="block w-full text-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-sm shadow-md hover:bg-indigo-700 transition disabled:opacity-50">
+          <span x-show="!loading">Subscribe Now</span>
+          <span x-show="loading">Redirecting...</span>
+        </button>
+      </template>
+      <template x-if="!paymentsAvailable">
+        <button disabled
+                class="block w-full text-center px-4 py-2.5 rounded-xl bg-gray-300 text-gray-500 font-semibold text-sm cursor-not-allowed">
+          Payments coming soon
+        </button>
+      </template>
     </div>
 
   </div>
@@ -192,6 +200,12 @@ function pricingPage() {
     // These should be configured as Stripe Price IDs in your Stripe dashboard
     monthlyPriceId: '{{ monthly_price_id }}',
     yearlyPriceId: '{{ yearly_price_id }}',
+
+    get paymentsAvailable() {
+      return this.monthlyPriceId && this.yearlyPriceId
+        && !this.monthlyPriceId.startsWith('price_monthly_')
+        && !this.yearlyPriceId.startsWith('price_yearly_');
+    },
 
     async checkout(priceId) {
       this.loading = true;

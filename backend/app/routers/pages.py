@@ -25,13 +25,6 @@ router = APIRouter()
 templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
 
 
-# ---------------------------------------------------------------------------
-# Stripe price IDs – replace with your actual Stripe Price IDs
-# ---------------------------------------------------------------------------
-MONTHLY_PRICE_ID = "price_monthly_placeholder"
-YEARLY_PRICE_ID = "price_yearly_placeholder"
-
-
 def _get_session_user(request: Request) -> dict | None:
     """Extract user info from the session cookie JWT. Returns None if invalid."""
     token = request.cookies.get("session")
@@ -157,10 +150,11 @@ async def _get_user_by_id(user_id_str: str) -> User | None:
 @router.get("/pricing", response_class=HTMLResponse)
 async def pricing_page(request: Request):
     """Subscription pricing page with plan selection and checkout."""
+    settings = get_settings()
     return templates.TemplateResponse("pages/pricing.html", {
         "request": request,
-        "monthly_price_id": MONTHLY_PRICE_ID,
-        "yearly_price_id": YEARLY_PRICE_ID,
+        "monthly_price_id": settings.stripe_monthly_price_id,
+        "yearly_price_id": settings.stripe_yearly_price_id,
     })
 
 
