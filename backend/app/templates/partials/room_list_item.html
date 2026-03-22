@@ -1,0 +1,13 @@
+{# Room list item partial — used inside Alpine x-for loop, expects: room object #}
+<button
+  class="w-full text-left px-4 py-3 flex items-center gap-3 transition hover:bg-gray-50 border-b border-gray-100"
+  :class="currentRoomId === room.id ? 'bg-indigo-50 border-l-4 border-l-indigo-500' : ''"
+  @click="selectRoom(room)">
+  <!-- Room avatar -->
+  <span class="flex-shrink-0 w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm"
+        x-text="room.name.charAt(0).toUpperCase()"></span>
+  <div class="flex-1 min-w-0">
+    <p class="text-sm font-semibold text-gray-900 truncate" x-text="room.name"></p>
+    <p class="text-xs text-gray-400 truncate" x-text="room.participant_count + ' participant' + (room.participant_count !== 1 ? 's' : '')"></p>
+  </div>
+</button>

@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}NORMALAIZER – Chat{% endblock %}
+
+{% block head %}
+<script src="/static/js/chat.js" defer></script>
+{% endblock %}
+
+{% block content %}
+<div x-data="chatApp('{{ token }}', '{{ user_id }}', '{{ display_name }}', '{{ initial_room_id or '' }}')"
+     x-init="init()"
+     class="flex flex-col h-screen relative">
+
+  <!-- ====== TOP HEADER ====== -->
+  <header class="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200 flex-shrink-0 z-20">
+    <!-- Hamburger (mobile: toggle sidebar) -->
+    <button @click="sidebarOpen = !sidebarOpen" class="sm:hidden p-1 rounded-lg hover:bg-gray-100">
+      <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
+
+    <!-- Room name -->
+    <h1 class="flex-1 text-base font-bold text-gray-900 truncate"
+        x-text="currentRoomName || 'NORMALAIZER'"></h1>
+
+    <!-- Online indicator -->
+    <template x-if="currentRoomId">
+      <span class="flex items-center gap-1 text-xs text-gray-400">
+        <span class="w-2 h-2 rounded-full" :class="wsConnected ? 'bg-green-400' : 'bg-red-400'"></span>
+        <span x-text="wsConnected ? 'Connected' : 'Disconnected'"></span>
+      </span>
+    </template>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden relative">
+
+    <!-- ====== SIDEBAR (room list) ====== -->
+    <!-- Mobile: overlay drawer -->
+    <div x-show="sidebarOpen"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click="sidebarOpen = false"
+         class="sm:hidden fixed inset-0 bg-black/30 z-30"></div>
+
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'"
+           class="absolute sm:relative z-40 sm:z-auto w-72 sm:w-64 h-full bg-white border-r border-gray-200 flex flex-col flex-shrink-0 overflow-hidden transition-transform duration-200">
+
+      <!-- Sidebar header -->
+      <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-sm font-bold text-gray-900">Rooms</h2>
+        <button @click="showCreateRoom = true"
+                class="p-1.5 rounded-lg bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition"
+                title="Create room">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Room list -->
+      <div class="flex-1 overflow-y-auto">
+        <template x-if="rooms.length === 0 && !loadingRooms">
+          <div class="px-4 py-8 text-center">
+            <p class="text-sm text-gray-400">No rooms yet</p>
+            <button @click="showCreateRoom = true"
+                    class="mt-2 text-sm text-indigo-600 font-semibold hover:underline">
+              Create your first room
+            </button>
+          </div>
+        </template>
+
+        <template x-if="loadingRooms">
+          <div class="px-4 py-8 text-center">
+            <p class="text-sm text-gray-400">Loading rooms...</p>
+          </div>
+        </template>
+
+        <template x-for="room in rooms" :key="room.id">
+          {% include "partials/room_list_item.html" %}
+        </template>
+      </div>
+
+      <!-- User info footer -->
+      <div class="px-4 py-3 border-t border-gray-200 bg-gray-50">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold"
+                x-text="displayName.charAt(0).toUpperCase()"></span>
+          <span class="text-sm font-medium text-gray-700 truncate" x-text="displayName"></span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ====== CHAT AREA ====== -->
+    <main class="flex-1 flex flex-col min-w-0 bg-gray-50">
+
+      <!-- No room selected -->
+      <template x-if="!currentRoomId">
+        <div class="flex-1 flex items-center justify-center">
+          <div class="text-center px-4">
+            <p class="text-4xl mb-3">💬</p>
+            <p class="text-sm text-gray-400">Select a room to start chatting</p>
+          </div>
+        </div>
+      </template>
+
+      <!-- Chat messages -->
+      <template x-if="currentRoomId">
+        <div class="flex-1 flex flex-col min-h-0">
+          <!-- Messages container -->
+          <div class="flex-1 overflow-y-auto px-4 py-3 space-y-2" x-ref="messagesContainer">
+            <!-- Loading indicator -->
+            <template x-if="loadingMessages">
+              <div class="text-center py-4">
+                <p class="text-xs text-gray-400">Loading messages...</p>
+              </div>
+            </template>
+
+            <!-- Messages -->
+            <template x-for="msg in messages" :key="msg.id">
+              {% include "partials/message_bubble.html" %}
+            </template>
+
+            <!-- Typing indicator -->
+            <template x-if="typingUsers.length > 0">
+              <div class="flex justify-start">
+                <div class="bg-gray-100 rounded-2xl rounded-bl-md px-4 py-2">
+                  <p class="text-xs text-gray-400" x-text="typingText"></p>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- ====== INPUT BAR ====== -->
+          <form @submit.prevent="sendMessage()" class="flex-shrink-0 border-t border-gray-200 bg-white px-3 py-2">
+            <div class="flex items-center gap-2">
+              <input type="text"
+                     x-model="messageInput"
+                     @keydown.enter.prevent="sendMessage()"
+                     @input="handleTyping()"
+                     placeholder="Type a message..."
+                     class="flex-1 px-4 py-2.5 text-sm bg-gray-100 rounded-full border-0 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition"
+                     :disabled="!wsConnected" />
+              <button type="submit"
+                      :disabled="!messageInput.trim() || !wsConnected"
+                      class="flex-shrink-0 w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
+                </svg>
+              </button>
+            </div>
+          </form>
+        </div>
+      </template>
+
+    </main>
+  </div>
+
+  <!-- ====== CREATE ROOM MODAL ====== -->
+  <div x-show="showCreateRoom"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4"
+       @click.self="showCreateRoom = false">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
+         @click.stop>
+      <h3 class="text-lg font-bold text-gray-900 mb-4">Create Room</h3>
+      <form @submit.prevent="createRoom()">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Room name</label>
+        <input type="text"
+               x-model="newRoomName"
+               placeholder="e.g. Team Chat"
+               class="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none mb-3" />
+
+        <label class="flex items-center gap-2 text-sm text-gray-600 mb-4">
+          <input type="checkbox" x-model="newRoomPublic"
+                 class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+          Public room (anyone can join)
+        </label>
+
+        <div class="flex gap-2">
+          <button type="button" @click="showCreateRoom = false"
+                  class="flex-1 px-4 py-2.5 text-sm font-semibold border border-gray-300 rounded-xl hover:bg-gray-50 transition">
+            Cancel
+          </button>
+          <button type="submit"
+                  :disabled="!newRoomName.trim() || creatingRoom"
+                  class="flex-1 px-4 py-2.5 text-sm font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition">
+            <span x-text="creatingRoom ? 'Creating...' : 'Create'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====== ERROR TOAST ====== -->
+  <div x-show="errorMsg"
+       x-transition
+       class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-red-600 text-white text-sm px-4 py-2 rounded-xl shadow-lg z-50"
+       x-text="errorMsg"
+       @click="errorMsg = ''"></div>
+
+</div>
+{% endblock %}
