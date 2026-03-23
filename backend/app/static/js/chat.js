@@ -4,6 +4,39 @@
  * Manages rooms, WebSocket connections, and message rendering.
  */
 
+/**
+ * Helper: fetch with AbortController timeout.
+ * @param {string} url
+ * @param {RequestInit} options
+ * @param {number} timeoutMs - milliseconds before abort
+ * @returns {Promise<Response>}
+ */
+async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('__timeout__');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Classify a caught error into a user-facing message.
+ */
+function chatUserError(err, fallback) {
+  if (err && err.message === '__timeout__') {
+    return 'Request timed out. Please try again.';
+  }
+  return fallback || 'Network error. Check your connection and try again.';
+}
+
 function chatApp(token, userId, displayName, initialRoomId) {
   return {
     // Auth
@@ -15,6 +48,10 @@ function chatApp(token, userId, displayName, initialRoomId) {
     sidebarOpen: false,
     showCreateRoom: false,
     errorMsg: '',
+
+    // Connection status banner
+    connectionStatus: '', // '', 'reconnecting', 'disconnected'
+    connectionMessage: '',
 
     // Room list
     rooms: [],
@@ -40,6 +77,7 @@ function chatApp(token, userId, displayName, initialRoomId) {
     newRoomName: '',
     newRoomPublic: false,
     creatingRoom: false,
+    createRoomError: '',
 
     // Browse public rooms
     showBrowseRooms: false,
@@ -96,9 +134,9 @@ function chatApp(token, userId, displayName, initialRoomId) {
     async fetchRooms() {
       this.loadingRooms = true;
       try {
-        const res = await fetch('/rooms', {
+        const res = await fetchWithTimeout('/rooms', {
           headers: { 'Authorization': 'Bearer ' + this.token },
-        });
+        }, 10000);
         if (!res.ok) throw new Error('Failed to load rooms');
         const data = await res.json();
         this.rooms = data.map(r => ({
@@ -109,8 +147,7 @@ function chatApp(token, userId, displayName, initialRoomId) {
           participant_count: r.participants ? r.participants.length : 0,
         }));
       } catch (e) {
-        this.showError('Could not load rooms');
-        console.error(e);
+        this.showError(chatUserError(e, 'Could not load rooms'));
       } finally {
         this.loadingRooms = false;
       }
@@ -142,16 +179,15 @@ function chatApp(token, userId, displayName, initialRoomId) {
     async fetchMessages() {
       this.loadingMessages = true;
       try {
-        const res = await fetch('/rooms/' + this.currentRoomId + '/messages?limit=100', {
+        const res = await fetchWithTimeout('/rooms/' + this.currentRoomId + '/messages?limit=100', {
           headers: { 'Authorization': 'Bearer ' + this.token },
-        });
+        }, 10000);
         if (!res.ok) throw new Error('Failed to load messages');
         const data = await res.json();
         this.messages = data.map(m => this.formatMessage(m));
         this.$nextTick(() => this.scrollToBottom());
       } catch (e) {
-        this.showError('Could not load messages');
-        console.error(e);
+        this.showError(chatUserError(e, 'Could not load messages'));
       } finally {
         this.loadingMessages = false;
       }
@@ -196,6 +232,8 @@ function chatApp(token, userId, displayName, initialRoomId) {
       this.ws.onopen = () => {
         this.wsConnected = true;
         this.reconnectAttempts = 0;
+        this.connectionStatus = '';
+        this.connectionMessage = '';
       };
 
       this.ws.onmessage = (event) => {
@@ -203,7 +241,7 @@ function chatApp(token, userId, displayName, initialRoomId) {
           const payload = JSON.parse(event.data);
           this.handleWsMessage(payload);
         } catch (e) {
-          console.error('WS parse error:', e);
+          // Ignore malformed messages from server
         }
       };
 
@@ -226,6 +264,8 @@ function chatApp(token, userId, displayName, initialRoomId) {
         this.reconnectTimer = null;
       }
       this.reconnectAttempts = 0;
+      this.connectionStatus = '';
+      this.connectionMessage = '';
       if (this.ws) {
         this.ws.close(1000, 'Room switch');
         this.ws = null;
@@ -235,14 +275,31 @@ function chatApp(token, userId, displayName, initialRoomId) {
 
     scheduleReconnect() {
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        this.showError('Connection lost. Please refresh the page.');
+        this.connectionStatus = 'disconnected';
+        this.connectionMessage = 'Connection lost. Click to reconnect.';
         return;
       }
+      this.connectionStatus = 'reconnecting';
+      this.connectionMessage = 'Connection lost. Reconnecting...';
       const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
       this.reconnectAttempts++;
       this.reconnectTimer = setTimeout(() => {
         this.connectWebSocket();
       }, delay);
+    },
+
+    /**
+     * Manual reconnect triggered by user clicking the "Click to reconnect" banner.
+     */
+    manualReconnect() {
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+      this.reconnectAttempts = 0;
+      this.connectionStatus = 'reconnecting';
+      this.connectionMessage = 'Reconnecting...';
+      this.connectWebSocket();
     },
 
     handleWsMessage(payload) {
@@ -304,7 +361,40 @@ function chatApp(token, userId, displayName, initialRoomId) {
         }
 
         case 'error': {
-          this.showError(payload.data.message || 'An error occurred');
+          const errData = payload.data || {};
+          const errCode = errData.code || '';
+          const errMessage = errData.message || 'An error occurred';
+
+          if (errCode === 'credit_exhausted') {
+            // Show upgrade CTA as a persistent system message
+            this.messages.push({
+              id: 'err-' + Date.now(),
+              sender_id: null,
+              sender_name: '',
+              text: errMessage + ' <a href="/pricing" class="underline font-semibold">Upgrade your plan</a>',
+              is_own: false,
+              time: this.formatTime(new Date().toISOString()),
+              is_system: true,
+              is_error: true,
+              is_html: true,
+            });
+            this.showError('Credits exhausted. Please upgrade your plan.');
+            this.$nextTick(() => this.scrollToBottom());
+          } else if (errCode === 'translation_failed') {
+            // Show note that message was sent without translation
+            this.messages.push({
+              id: 'err-' + Date.now(),
+              sender_id: null,
+              sender_name: '',
+              text: 'Translation unavailable — your message was sent without translation.',
+              is_own: false,
+              time: this.formatTime(new Date().toISOString()),
+              is_system: true,
+            });
+            this.$nextTick(() => this.scrollToBottom());
+          } else {
+            this.showError(errMessage);
+          }
           break;
         }
       }
@@ -314,14 +404,26 @@ function chatApp(token, userId, displayName, initialRoomId) {
 
     sendMessage() {
       const text = this.messageInput.trim();
-      if (!text || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+      if (!text) return;
 
-      this.ws.send(JSON.stringify({
-        type: 'send_message',
-        text: text,
-      }));
+      // Check WebSocket is connected and open
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        this.showError('Not connected. Please wait for reconnection or click the banner to reconnect.');
+        // Keep the message in the input box — do NOT clear it
+        return;
+      }
 
-      this.messageInput = '';
+      try {
+        this.ws.send(JSON.stringify({
+          type: 'send_message',
+          text: text,
+        }));
+        // Only clear input on successful send
+        this.messageInput = '';
+      } catch (e) {
+        this.showError('Failed to send message. Please try again.');
+        // Keep the message in the input box
+      }
     },
 
     handleTyping() {
@@ -341,8 +443,9 @@ function chatApp(token, userId, displayName, initialRoomId) {
       if (!name) return;
 
       this.creatingRoom = true;
+      this.createRoomError = '';
       try {
-        const res = await fetch('/rooms', {
+        const res = await fetchWithTimeout('/rooms', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -352,8 +455,11 @@ function chatApp(token, userId, displayName, initialRoomId) {
             name: name,
             is_public: this.newRoomPublic,
           }),
-        });
-        if (!res.ok) throw new Error('Failed to create room');
+        }, 15000);
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error((data && data.detail) || 'Failed to create room');
+        }
         const room = await res.json();
         const mapped = {
           id: room.id,
@@ -366,10 +472,10 @@ function chatApp(token, userId, displayName, initialRoomId) {
         this.showCreateRoom = false;
         this.newRoomName = '';
         this.newRoomPublic = false;
+        this.createRoomError = '';
         this.selectRoom(mapped);
       } catch (e) {
-        this.showError('Could not create room');
-        console.error(e);
+        this.createRoomError = chatUserError(e, 'Could not create room. Please try again.');
       } finally {
         this.creatingRoom = false;
       }
@@ -380,9 +486,9 @@ function chatApp(token, userId, displayName, initialRoomId) {
     async fetchPublicRooms() {
       this.loadingPublicRooms = true;
       try {
-        const res = await fetch('/rooms/public', {
+        const res = await fetchWithTimeout('/rooms/public', {
           headers: { 'Authorization': 'Bearer ' + this.token },
-        });
+        }, 10000);
         if (!res.ok) throw new Error('Failed to load public rooms');
         const data = await res.json();
         this.publicRooms = data.map(r => ({
@@ -393,8 +499,7 @@ function chatApp(token, userId, displayName, initialRoomId) {
           participant_count: r.participants ? r.participants.length : 0,
         }));
       } catch (e) {
-        this.showError('Could not load public rooms');
-        console.error(e);
+        this.showError(chatUserError(e, 'Could not load public rooms'));
       } finally {
         this.loadingPublicRooms = false;
       }
@@ -411,10 +516,10 @@ function chatApp(token, userId, displayName, initialRoomId) {
       if (this.joiningRoomId) return;
       this.joiningRoomId = room.id;
       try {
-        const res = await fetch('/rooms/' + room.id + '/join', {
+        const res = await fetchWithTimeout('/rooms/' + room.id + '/join', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + this.token },
-        });
+        }, 15000);
         if (!res.ok) throw new Error('Failed to join room');
         const joined = await res.json();
         const mapped = {
@@ -434,8 +539,7 @@ function chatApp(token, userId, displayName, initialRoomId) {
         this.roomTab = 'my';
         this.selectRoom(mapped);
       } catch (e) {
-        this.showError('Could not join room');
-        console.error(e);
+        this.showError(chatUserError(e, 'Could not join room'));
       } finally {
         this.joiningRoomId = null;
       }
@@ -489,21 +593,20 @@ function chatApp(token, userId, displayName, initialRoomId) {
       this.creatingTranscript = true;
       this.shareCopied = false;
       try {
-        const res = await fetch('/transcripts', {
+        const res = await fetchWithTimeout('/transcripts', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + this.token,
           },
           body: JSON.stringify({ room_id: this.currentRoomId }),
-        });
+        }, 15000);
         if (!res.ok) throw new Error('Failed to create transcript');
         const data = await res.json();
         this.shareLink = window.location.origin + '/t/' + data.slug;
         this.showShareModal = true;
       } catch (e) {
-        this.showError('Could not create share link');
-        console.error(e);
+        this.showError(chatUserError(e, 'Could not create share link'));
       } finally {
         this.creatingTranscript = false;
       }

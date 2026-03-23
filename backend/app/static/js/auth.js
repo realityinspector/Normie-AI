@@ -4,6 +4,36 @@
  */
 
 /**
+ * Helper: fetch with AbortController timeout.
+ * Returns the Response on success; throws on timeout or network error.
+ */
+async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('__timeout__');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Classify a caught error into a user-facing message.
+ */
+function userErrorMessage(err, fallback) {
+  if (err.message === '__timeout__') {
+    return 'Request timed out. Please try again.';
+  }
+  return 'Network error. Check your connection and try again.';
+}
+
+/**
  * Global callback for Google Sign-In credential response.
  * Delegates to the Alpine.js googleSignIn component.
  */
@@ -22,6 +52,7 @@ function googleSignIn(clientId, nextUrl) {
     googleError: "",
     clientId: clientId,
     nextUrl: nextUrl || "",
+    loading: false,
 
     init() {
       // Listen for the Google credential response
@@ -38,13 +69,14 @@ function googleSignIn(clientId, nextUrl) {
         return;
       }
 
+      this.loading = true;
       try {
-        const res = await fetch("/auth/google", {
+        const res = await fetchWithTimeout("/auth/google", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ credential: response.credential }),
-        });
+        }, 15000);
 
         if (!res.ok) {
           const data = await res.json().catch(() => null);
@@ -57,7 +89,9 @@ function googleSignIn(clientId, nextUrl) {
         // Success — redirect to next URL or app
         window.location.href = this.nextUrl || "/app";
       } catch (err) {
-        this.googleError = "Network error. Please check your connection.";
+        this.googleError = userErrorMessage(err);
+      } finally {
+        this.loading = false;
       }
     },
   };
@@ -102,7 +136,7 @@ function loginForm(nextUrl) {
 
       this.loading = true;
       try {
-        const res = await fetch("/auth/login", {
+        const res = await fetchWithTimeout("/auth/login", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -110,7 +144,7 @@ function loginForm(nextUrl) {
             email: this.email.trim(),
             password: this.password,
           }),
-        });
+        }, 15000);
 
         if (!res.ok) {
           const data = await res.json().catch(() => null);
@@ -122,7 +156,7 @@ function loginForm(nextUrl) {
         // Success — redirect to next URL or app
         window.location.href = this.nextUrl || "/app";
       } catch (err) {
-        this.errorMessage = "Network error. Please check your connection.";
+        this.errorMessage = userErrorMessage(err);
       } finally {
         this.loading = false;
       }
@@ -194,7 +228,7 @@ function signupForm(nextUrl) {
 
       this.loading = true;
       try {
-        const res = await fetch("/auth/signup", {
+        const res = await fetchWithTimeout("/auth/signup", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -203,7 +237,7 @@ function signupForm(nextUrl) {
             display_name: this.displayName.trim(),
             password: this.password,
           }),
-        });
+        }, 15000);
 
         if (!res.ok) {
           const data = await res.json().catch(() => null);
@@ -215,7 +249,7 @@ function signupForm(nextUrl) {
         // Success — redirect to next URL or app
         window.location.href = this.nextUrl || "/app";
       } catch (err) {
-        this.errorMessage = "Network error. Please check your connection.";
+        this.errorMessage = userErrorMessage(err);
       } finally {
         this.loading = false;
       }
