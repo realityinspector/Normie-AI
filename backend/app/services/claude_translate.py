@@ -1,5 +1,4 @@
 import logging
-import asyncio
 
 from openai import OpenAI, OpenAIError
 from app.config import get_settings
@@ -76,6 +75,7 @@ def _call_with_retries(client: OpenAI, **kwargs) -> object:
                     wait,
                 )
                 import time
+
                 time.sleep(wait)
             else:
                 logger.error(

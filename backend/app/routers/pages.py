@@ -296,9 +296,7 @@ async def room_join(request: Request, room_id: uuid.UUID):
     """Join a room via invite link. Redirects unauthenticated users to signup."""
     session = _get_session_user(request)
     if not session:
-        return RedirectResponse(
-            url=f"/signup?next=/r/{room_id}/join", status_code=302
-        )
+        return RedirectResponse(url=f"/signup?next=/r/{room_id}/join", status_code=302)
 
     # Auto-join the user to the room
     async with async_session() as db:

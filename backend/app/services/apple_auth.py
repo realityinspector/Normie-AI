@@ -29,9 +29,7 @@ async def verify_apple_identity_token(identity_token: str) -> dict:
         ) from exc
     except Exception as exc:
         logger.error("Unexpected error fetching Apple signing keys: %s", str(exc))
-        raise RuntimeError(
-            "Apple sign-in temporarily unavailable"
-        ) from exc
+        raise RuntimeError("Apple sign-in temporarily unavailable") from exc
 
     claims = jwt.decode(
         identity_token,

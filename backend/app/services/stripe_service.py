@@ -42,8 +42,12 @@ async def create_checkout_session(
                 timeout=STRIPE_TIMEOUT,
             )
         except stripe.StripeError as exc:
-            logger.error("Stripe customer creation failed for user %s: %s", user.id, str(exc))
-            raise RuntimeError("Payment service temporarily unavailable. Please try again.") from exc
+            logger.error(
+                "Stripe customer creation failed for user %s: %s", user.id, str(exc)
+            )
+            raise RuntimeError(
+                "Payment service temporarily unavailable. Please try again."
+            ) from exc
         user.stripe_customer_id = customer.id
         await db.flush()
 
@@ -59,8 +63,12 @@ async def create_checkout_session(
             timeout=STRIPE_TIMEOUT,
         )
     except stripe.StripeError as exc:
-        logger.error("Stripe checkout session creation failed for user %s: %s", user.id, str(exc))
-        raise RuntimeError("Payment service temporarily unavailable. Please try again.") from exc
+        logger.error(
+            "Stripe checkout session creation failed for user %s: %s", user.id, str(exc)
+        )
+        raise RuntimeError(
+            "Payment service temporarily unavailable. Please try again."
+        ) from exc
     return session
 
 
@@ -84,7 +92,9 @@ async def create_customer_portal_session(user: User) -> stripe.billing_portal.Se
             user.id,
             str(exc),
         )
-        raise RuntimeError("Payment service temporarily unavailable. Please try again.") from exc
+        raise RuntimeError(
+            "Payment service temporarily unavailable. Please try again."
+        ) from exc
     return session
 
 
@@ -119,9 +129,7 @@ async def handle_checkout_completed(
         )
     except Exception:
         await db.rollback()
-        logger.exception(
-            "Failed to commit checkout completion for user %s", user.id
-        )
+        logger.exception("Failed to commit checkout completion for user %s", user.id)
         raise
 
 
@@ -164,9 +172,7 @@ async def handle_subscription_updated(
         )
     except Exception:
         await db.rollback()
-        logger.exception(
-            "Failed to commit subscription update for user %s", user.id
-        )
+        logger.exception("Failed to commit subscription update for user %s", user.id)
         raise
 
 
@@ -194,7 +200,5 @@ async def handle_subscription_deleted(
         )
     except Exception:
         await db.rollback()
-        logger.exception(
-            "Failed to commit subscription deletion for user %s", user.id
-        )
+        logger.exception("Failed to commit subscription deletion for user %s", user.id)
         raise
