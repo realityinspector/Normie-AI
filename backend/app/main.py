@@ -4,8 +4,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_settings
 from app.routers import (
@@ -49,6 +51,30 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+@app.exception_handler(404)
+async def custom_404(request, exc):
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept:
+        return HTMLResponse(
+            content=(
+                "<!DOCTYPE html><html><head><meta charset='UTF-8'>"
+                "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+                "<script src='https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'></script>"
+                "<link rel='icon' href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>\" />"
+                "<title>Page Not Found – NORMALAIZER</title></head>"
+                "<body class='bg-gray-100 min-h-screen flex items-center justify-center'>"
+                "<div class='text-center px-6'>"
+                "<p class='text-6xl mb-4'>🧠</p>"
+                "<h1 class='text-xl font-bold text-gray-800 mb-2'>Page not found</h1>"
+                "<p class='text-sm text-gray-500 mb-6'>The page you're looking for doesn't exist.</p>"
+                "<a href='/' class='px-6 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition'>Go Home</a>"
+                "</div></body></html>"
+            ),
+            status_code=404,
+        )
+    return JSONResponse(status_code=404, content={"detail": "Not found"})
+
 
 settings = get_settings()
 cors_origins = (

@@ -94,7 +94,7 @@ async def app_page(request: Request):
     """Main chat application page. Requires auth — redirects to /login if no session."""
     session = _get_session_user(request)
     if not session:
-        return RedirectResponse(url="/login", status_code=302)
+        return RedirectResponse(url="/login?next=/app", status_code=302)
 
     # Fetch display_name from DB for template context
     display_name = await _get_display_name(session["user_id"])
@@ -116,7 +116,7 @@ async def app_room_page(request: Request, room_id: uuid.UUID):
     """Chat app with a specific room pre-selected. Requires auth."""
     session = _get_session_user(request)
     if not session:
-        return RedirectResponse(url="/login", status_code=302)
+        return RedirectResponse(url=f"/login?next=/app/room/{room_id}", status_code=302)
 
     display_name = await _get_display_name(session["user_id"])
 
@@ -190,7 +190,7 @@ async def settings_page(request: Request):
     """User settings page with profile, subscription, and referral info."""
     session = _get_session_user(request)
     if not session:
-        return RedirectResponse(url="/login", status_code=302)
+        return RedirectResponse(url="/login?next=/settings", status_code=302)
 
     user = await _get_user_by_id(session["user_id"])
     if not user:

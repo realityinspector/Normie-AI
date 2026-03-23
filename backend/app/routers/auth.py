@@ -177,7 +177,7 @@ async def apple_sign_in(
         logger.warning("Apple sign-in auth failed: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid Apple identity token: {e}",
+            detail="Apple sign-in failed. Please try again or use email signup.",
         )
 
     apple_sub = claims["sub"]

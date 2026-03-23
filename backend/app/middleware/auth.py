@@ -28,7 +28,7 @@ async def get_current_user(
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
+            detail="Please log in to continue.",
         )
 
     try:
@@ -41,7 +41,7 @@ async def get_current_user(
     except (jwt.PyJWTError, KeyError, ValueError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+            detail="Your session has expired. Please log in again.",
         )
 
     result = await db.execute(select(User).where(User.id == user_id))
@@ -49,6 +49,6 @@ async def get_current_user(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
+            detail="Session invalid. Please log in again.",
         )
     return user
