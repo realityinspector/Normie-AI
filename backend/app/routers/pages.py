@@ -268,7 +268,19 @@ async def room_invite(request: Request, room_id: uuid.UUID):
 
         if not room:
             return HTMLResponse(
-                content="<h1>Room not found</h1><p><a href='/'>Go home</a></p>",
+                content=(
+                    "<!DOCTYPE html><html><head><meta charset='UTF-8'>"
+                    "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+                    "<script src='https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'></script>"
+                    "<title>Room Not Found</title></head>"
+                    "<body class='bg-gray-100 min-h-screen flex items-center justify-center'>"
+                    "<div class='text-center px-6'>"
+                    "<p class='text-5xl mb-4'>🔍</p>"
+                    "<h1 class='text-xl font-bold text-gray-800 mb-2'>Room not found</h1>"
+                    "<p class='text-sm text-gray-500 mb-6'>This room may have been deleted or the link is invalid.</p>"
+                    "<a href='/' class='px-6 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700'>Go Home</a>"
+                    "</div></body></html>"
+                ),
                 status_code=404,
             )
 
@@ -305,7 +317,19 @@ async def room_join(request: Request, room_id: uuid.UUID):
 
         if not room:
             return HTMLResponse(
-                content="<h1>Room not found</h1><p><a href='/'>Go home</a></p>",
+                content=(
+                    "<!DOCTYPE html><html><head><meta charset='UTF-8'>"
+                    "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+                    "<script src='https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'></script>"
+                    "<title>Room Not Found</title></head>"
+                    "<body class='bg-gray-100 min-h-screen flex items-center justify-center'>"
+                    "<div class='text-center px-6'>"
+                    "<p class='text-5xl mb-4'>🔍</p>"
+                    "<h1 class='text-xl font-bold text-gray-800 mb-2'>Room not found</h1>"
+                    "<p class='text-sm text-gray-500 mb-6'>This room may have been deleted or the link is invalid.</p>"
+                    "<a href='/' class='px-6 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700'>Go Home</a>"
+                    "</div></body></html>"
+                ),
                 status_code=404,
             )
 
