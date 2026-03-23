@@ -146,7 +146,7 @@ async def chat_websocket(
                                     "type": "error",
                                     "data": {
                                         "error_type": "credit_exhausted",
-                                        "message": "You have used all your free credits. Upgrade to continue chatting.",
+                                        "message": "You're out of free credits. Visit the pricing page to keep chatting.",
                                     },
                                 },
                             )
