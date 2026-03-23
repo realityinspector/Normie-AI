@@ -134,9 +134,7 @@ async def redeem_referral(
         )
 
     # Lock the user row to prevent concurrent referral redemption
-    result = await db.execute(
-        select(User).where(User.id == user.id).with_for_update()
-    )
+    result = await db.execute(select(User).where(User.id == user.id).with_for_update())
     locked_user = result.scalar_one()
 
     if locked_user.referred_by is not None:

@@ -21,7 +21,7 @@ from app.schemas.auth import (
 from pydantic import BaseModel
 from app.services.apple_auth import verify_apple_identity_token
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("normalaizer")
 
 # Simple in-memory rate limiter for auth endpoints
 _auth_rate_limits: dict[str, list[float]] = defaultdict(list)
@@ -88,6 +88,7 @@ async def signup(
     """Create a new user with email and password."""
     client_ip = request.client.host if request.client else "unknown"
     if not _check_rate_limit(client_ip):
+        logger.warning("Rate limit hit: endpoint=signup ip=%s", client_ip)
         raise HTTPException(
             status_code=429, detail="Too many requests. Try again in a minute."
         )
@@ -133,6 +134,7 @@ async def login(
     """Authenticate with email and password."""
     client_ip = request.client.host if request.client else "unknown"
     if not _check_rate_limit(client_ip):
+        logger.warning("Rate limit hit: endpoint=login ip=%s", client_ip)
         raise HTTPException(
             status_code=429, detail="Too many requests. Try again in a minute."
         )
@@ -141,12 +143,18 @@ async def login(
     user = result.scalar_one_or_none()
 
     if not user or not user.password_hash:
+        logger.warning(
+            "Login failed: invalid credentials email=%s ip=%s", body.email, client_ip
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
     if not _verify_password(body.password, user.password_hash):
+        logger.warning(
+            "Login failed: wrong password email=%s ip=%s", body.email, client_ip
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -166,6 +174,7 @@ async def apple_sign_in(
     try:
         claims = await verify_apple_identity_token(request.identity_token)
     except Exception as e:
+        logger.warning("Apple sign-in auth failed: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid Apple identity token: {e}",
@@ -192,9 +201,7 @@ async def apple_sign_in(
         except IntegrityError:
             await db.rollback()
             # apple_sub collision — another request created this user concurrently
-            result = await db.execute(
-                select(User).where(User.apple_sub == apple_sub)
-            )
+            result = await db.execute(select(User).where(User.apple_sub == apple_sub))
             user = result.scalar_one_or_none()
             if not user:
                 raise HTTPException(
@@ -293,9 +300,7 @@ async def google_sign_in(
     except IntegrityError:
         await db.rollback()
         # google_sub or email collision — another request created this user concurrently
-        result = await db.execute(
-            select(User).where(User.google_sub == google_sub)
-        )
+        result = await db.execute(select(User).where(User.google_sub == google_sub))
         user = result.scalar_one_or_none()
         if not user:
             raise HTTPException(
@@ -325,6 +330,7 @@ async def dev_sign_in(
     """DEV ONLY: Create a test user without Apple Sign-In. Gated by DEV_AUTH_ENABLED env var."""
     client_ip = request.client.host if request.client else "unknown"
     if not _check_rate_limit(client_ip):
+        logger.warning("Rate limit hit: endpoint=dev_auth ip=%s", client_ip)
         raise HTTPException(
             status_code=429, detail="Too many requests. Try again in a minute."
         )

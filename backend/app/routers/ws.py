@@ -1,5 +1,6 @@
 import uuid
 import json
+import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 import jwt as pyjwt
@@ -13,6 +14,9 @@ from app.models.message import Message
 from app.services.claude_translate import translate_text
 from app.services.credit_manager import check_and_deduct
 from app.services.connection_manager import manager
+from fastapi import HTTPException
+
+logger = logging.getLogger("normalaizer")
 
 router = APIRouter()
 
@@ -37,6 +41,7 @@ async def chat_websocket(
 ):
     user_id = await _authenticate_ws(token)
     if not user_id:
+        logger.warning("WebSocket auth failed: invalid token for room=%s", room_id)
         await websocket.close(code=4001, reason="Unauthorized")
         return
 
@@ -45,6 +50,11 @@ async def chat_websocket(
         user_result = await db.execute(select(User).where(User.id == user_id))
         user = user_result.scalar_one_or_none()
         if not user:
+            logger.warning(
+                "WebSocket auth failed: user not found user_id=%s room_id=%s",
+                user_id,
+                room_id,
+            )
             await websocket.close(code=4001, reason="User not found")
             return
 
@@ -122,14 +132,58 @@ async def chat_websocket(
                                 1,
                                 "Chat message credit usage",
                             )
+                    except HTTPException as exc:
+                        if exc.status_code == 402:
+                            logger.warning(
+                                "Credit exhausted: user_id=%s room_id=%s",
+                                user_id,
+                                room_id,
+                            )
+                            await manager.send_to_user(
+                                room_id,
+                                user_id,
+                                {
+                                    "type": "error",
+                                    "data": {
+                                        "error_type": "credit_exhausted",
+                                        "message": "You have used all your free credits. Upgrade to continue chatting.",
+                                    },
+                                },
+                            )
+                        else:
+                            logger.error(
+                                "Credit check error: user_id=%s room_id=%s status=%s detail=%s",
+                                user_id,
+                                room_id,
+                                exc.status_code,
+                                exc.detail,
+                            )
+                            await manager.send_to_user(
+                                room_id,
+                                user_id,
+                                {
+                                    "type": "error",
+                                    "data": {
+                                        "error_type": "server_error",
+                                        "message": "Something went wrong. Please try again.",
+                                    },
+                                },
+                            )
+                        continue
                     except Exception:
+                        logger.exception(
+                            "Unexpected error during credit check: user_id=%s room_id=%s",
+                            user_id,
+                            room_id,
+                        )
                         await manager.send_to_user(
                             room_id,
                             user_id,
                             {
                                 "type": "error",
                                 "data": {
-                                    "message": "Subscription required. Neurodivergent users get free access."
+                                    "error_type": "server_error",
+                                    "message": "Something went wrong. Please try again.",
                                 },
                             },
                         )
@@ -164,20 +218,58 @@ async def chat_websocket(
                                 )
                                 translations[str(rp.user_id)] = translated
                             except Exception:
+                                logger.error(
+                                    "Translation failed: user_id=%s room_id=%s recipient_id=%s",
+                                    user_id,
+                                    room_id,
+                                    rp.user_id,
+                                    exc_info=True,
+                                )
                                 translations[str(rp.user_id)] = text
+                                # Notify sender that translation failed
+                                await manager.send_to_user(
+                                    room_id,
+                                    user_id,
+                                    {
+                                        "type": "error",
+                                        "data": {
+                                            "error_type": "translation_failed",
+                                            "message": "Translation temporarily unavailable. Your message was sent as-is.",
+                                        },
+                                    },
+                                )
                         else:
                             translations[str(rp.user_id)] = text
 
                     # Store message
-                    msg = Message(
-                        room_id=room_id,
-                        sender_id=user_id,
-                        original_text=text,
-                        translations=translations,
-                    )
-                    db.add(msg)
-                    await db.commit()
-                    await db.refresh(msg)
+                    try:
+                        msg = Message(
+                            room_id=room_id,
+                            sender_id=user_id,
+                            original_text=text,
+                            translations=translations,
+                        )
+                        db.add(msg)
+                        await db.commit()
+                        await db.refresh(msg)
+                    except Exception:
+                        logger.exception(
+                            "Database error saving message: user_id=%s room_id=%s",
+                            user_id,
+                            room_id,
+                        )
+                        await manager.send_to_user(
+                            room_id,
+                            user_id,
+                            {
+                                "type": "error",
+                                "data": {
+                                    "error_type": "server_error",
+                                    "message": "Something went wrong. Please try again.",
+                                },
+                            },
+                        )
+                        continue
 
                     # Broadcast to all connections
                     now = msg.created_at.isoformat()
@@ -219,16 +311,46 @@ async def chat_websocket(
                             )
 
     except WebSocketDisconnect:
+        logger.info(
+            "WebSocket disconnected normally: user_id=%s room_id=%s",
+            user_id,
+            room_id,
+        )
+    except Exception:
+        logger.exception(
+            "WebSocket unexpected error: user_id=%s room_id=%s",
+            user_id,
+            room_id,
+        )
+        # Send error message to client before closing
+        try:
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "data": {
+                        "error_type": "server_error",
+                        "message": "Connection lost, please refresh",
+                    },
+                }
+            )
+        except Exception:
+            pass  # Client may already be disconnected
+    finally:
         manager.disconnect(room_id, user_id)
         # Notify room of leave
         for uid in manager.get_room_connections(room_id):
-            await manager.send_to_user(
-                room_id,
-                uid,
-                {
-                    "type": "user_left",
-                    "data": {"user_id": str(user_id)},
-                },
-            )
-    except Exception:
-        manager.disconnect(room_id, user_id)
+            try:
+                await manager.send_to_user(
+                    room_id,
+                    uid,
+                    {
+                        "type": "user_left",
+                        "data": {"user_id": str(user_id)},
+                    },
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to send user_left notification: target_user=%s room_id=%s",
+                    uid,
+                    room_id,
+                )

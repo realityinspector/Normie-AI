@@ -17,7 +17,7 @@ from app.services.stripe_service import (
     handle_subscription_deleted,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("normalaizer")
 
 router = APIRouter()
 
