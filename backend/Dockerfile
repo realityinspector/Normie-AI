@@ -2,7 +2,8 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Copy everything first so pip install can find the package
+# Cache-bust: changes to any file trigger a fresh COPY
+ARG CACHEBUST=1
 COPY . .
 RUN pip install --no-cache-dir .
 
