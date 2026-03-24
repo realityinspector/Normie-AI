@@ -46,7 +46,7 @@ def _get_session_user(request: Request) -> dict | None:
 @router.get("/", response_class=HTMLResponse)
 async def landing(request: Request):
     """Marketing landing page with signup CTA."""
-    return templates.TemplateResponse("pages/landing.html", {"request": request})
+    return templates.TemplateResponse(request, "pages/landing.html")
 
 
 @router.get("/developers", response_class=HTMLResponse)
@@ -54,8 +54,9 @@ async def developers(request: Request, user: User = Depends(get_current_user)):
     """Developer documentation and API key management page."""
     base_url = str(request.base_url).rstrip("/")
     return templates.TemplateResponse(
+        request,
         "pages/developers.html",
-        {"request": request, "user": user, "base_url": base_url},
+        {"user": user, "base_url": base_url},
     )
 
 
@@ -65,9 +66,9 @@ async def login_page(request: Request):
     settings = get_settings()
     next_url = request.query_params.get("next", "")
     return templates.TemplateResponse(
+        request,
         "pages/login.html",
         {
-            "request": request,
             "google_client_id": settings.google_client_id,
             "next_url": next_url,
         },
@@ -80,9 +81,9 @@ async def signup_page(request: Request):
     settings = get_settings()
     next_url = request.query_params.get("next", "")
     return templates.TemplateResponse(
+        request,
         "pages/signup.html",
         {
-            "request": request,
             "google_client_id": settings.google_client_id,
             "next_url": next_url,
         },
@@ -100,9 +101,9 @@ async def app_page(request: Request):
     display_name = await _get_display_name(session["user_id"])
 
     return templates.TemplateResponse(
+        request,
         "pages/app.html",
         {
-            "request": request,
             "token": session["token"],
             "user_id": session["user_id"],
             "display_name": display_name,
@@ -121,9 +122,9 @@ async def app_room_page(request: Request, room_id: uuid.UUID):
     display_name = await _get_display_name(session["user_id"])
 
     return templates.TemplateResponse(
+        request,
         "pages/app.html",
         {
-            "request": request,
             "token": session["token"],
             "user_id": session["user_id"],
             "display_name": display_name,
@@ -171,9 +172,9 @@ async def pricing_page(request: Request):
     """Subscription pricing page with plan selection and checkout."""
     settings = get_settings()
     return templates.TemplateResponse(
+        request,
         "pages/pricing.html",
         {
-            "request": request,
             "monthly_price_id": settings.stripe_monthly_price_id,
             "yearly_price_id": settings.stripe_yearly_price_id,
         },
@@ -197,11 +198,9 @@ async def settings_page(request: Request):
         return RedirectResponse(url="/login", status_code=302)
 
     return templates.TemplateResponse(
+        request,
         "pages/settings.html",
-        {
-            "request": request,
-            "user": user,
-        },
+        {"user": user},
     )
 
 
@@ -246,9 +245,9 @@ async def public_transcript(request: Request, slug: str):
             )
 
     return templates.TemplateResponse(
+        request,
         "share/transcript.html",
         {
-            "request": request,
             "transcript": transcript,
             "messages": messages,
             "base_url": settings.base_url.rstrip("/"),
@@ -293,9 +292,9 @@ async def room_invite(request: Request, room_id: uuid.UUID):
         participant_count = count_result.scalar() or 0
 
     return templates.TemplateResponse(
+        request,
         "share/room_invite.html",
         {
-            "request": request,
             "room": room,
             "participant_count": participant_count,
             "base_url": settings.base_url.rstrip("/"),
