@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     stripe_monthly_price_id: str = ""
     stripe_yearly_price_id: str = ""
     cors_origins: str = ""
+    health_api_key: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

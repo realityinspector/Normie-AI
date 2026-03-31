@@ -1,14 +1,18 @@
 import logging
 import pathlib
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.database import get_db
 from app.routers import (
     auth,
     users,
@@ -50,6 +54,8 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+_app_start_time = time.time()
 
 
 @app.exception_handler(404)
@@ -119,3 +125,72 @@ app.include_router(pages.router, tags=["pages"])
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/health/detailed")
+async def health_detailed(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    api_key = request.headers.get("x-api-key", "")
+    expected = settings.health_api_key
+    if not expected or api_key != expected:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    checks = {}
+
+    # Database check
+    try:
+        start = time.time()
+        await db.execute(text("SELECT 1"))
+        checks["database"] = {
+            "status": "ok",
+            "latency_ms": round((time.time() - start) * 1000, 1),
+        }
+    except Exception as e:
+        checks["database"] = {"status": "error", "error": str(e)}
+
+    # Config checks
+    checks["openrouter"] = {"configured": bool(settings.openrouter_api_key)}
+    checks["stripe"] = {"configured": bool(settings.stripe_secret_key)}
+    checks["auth"] = {
+        "jwt_secret_secure": len(settings.jwt_secret) >= 16
+        and settings.jwt_secret != "change-me-in-production",
+        "dev_auth_enabled": settings.dev_auth_enabled,
+    }
+
+    # WebSocket connections
+    from app.services.connection_manager import manager
+
+    total_connections = sum(len(conns) for conns in manager.rooms.values())
+    checks["websocket"] = {"active_connections": total_connections}
+
+    # Credit warnings
+    try:
+        result = await db.execute(
+            text("SELECT COUNT(*) FROM users WHERE credit_balance < 0")
+        )
+        checks["credits"] = {"negative_balance_users": result.scalar() or 0}
+    except Exception:
+        checks["credits"] = {"negative_balance_users": "error"}
+
+    # Subscription warnings
+    try:
+        result = await db.execute(
+            text(
+                "SELECT COUNT(*) FROM users "
+                "WHERE subscription_active = true "
+                "AND subscription_expires_at < NOW()"
+            )
+        )
+        checks["subscriptions"] = {"stale_active_count": result.scalar() or 0}
+    except Exception:
+        checks["subscriptions"] = {"stale_active_count": "error"}
+
+    overall = "ok" if checks.get("database", {}).get("status") == "ok" else "degraded"
+
+    return {
+        "status": overall,
+        "checks": checks,
+        "uptime_seconds": round(time.time() - _app_start_time),
+    }
