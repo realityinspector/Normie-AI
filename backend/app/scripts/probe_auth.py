@@ -34,17 +34,7 @@ async def probe(base_url: str):
             )
             if r.status_code == 200:
                 token = r.json().get("access_token")
-                has_cookie = any(
-                    "session" in c for c in r.headers.get_list("set-cookie")
-                )
                 results.append(("Dev auth + token", bool(token), r.status_code))
-                results.append(
-                    (
-                        "Set-Cookie header",
-                        has_cookie,
-                        "present" if has_cookie else "missing",
-                    )
-                )
             elif r.status_code == 404:
                 results.append(
                     (
