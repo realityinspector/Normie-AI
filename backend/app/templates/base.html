@@ -14,6 +14,11 @@
   <!-- App CSS -->
   <link rel="stylesheet" href="/static/css/app.css?v=2" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>" />
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="/static/icon.svg">
 
   <!-- OG Meta Tags (defaults, override via blocks) -->
   <meta property="og:site_name" content="NORMALAIZER">
@@ -22,6 +27,9 @@
   {% block og_description %}<meta property="og:description" content="Real-time AI translation between neurotypical and neurodivergent communication styles.">{% endblock %}
   {% block og_image %}<meta property="og:image" content="/static/img/og-default.png">{% endblock %}
   <meta name="twitter:card" content="summary_large_image">
+
+  <!-- Analytics -->
+  <script src="/static/js/analytics.js"></script>
 
   {% block head %}{% endblock %}
 </head>

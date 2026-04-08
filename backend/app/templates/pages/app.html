@@ -184,7 +184,13 @@
         <div class="flex items-center gap-2">
           <span class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold"
                 x-text="displayName.charAt(0).toUpperCase()"></span>
-          <span class="text-sm font-medium text-gray-700 truncate" x-text="displayName"></span>
+          <span class="flex-1 text-sm font-medium text-gray-700 truncate" x-text="displayName"></span>
+          <button @click="fetch('/auth/logout',{method:'POST',credentials:'include'}).then(()=>window.location.href='/login')"
+                  class="p-1.5 rounded-lg hover:bg-gray-200 transition" title="Log out">
+            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+          </button>
         </div>
       </div>
     </aside>
@@ -195,10 +201,59 @@
       <!-- No room selected -->
       <template x-if="!currentRoomId">
         <div class="flex-1 flex items-center justify-center">
-          <div class="text-center px-4">
+
+          <!-- Welcome overlay for new users with no rooms -->
+          <div x-show="rooms.length === 0 && !loadingRooms" class="w-full max-w-2xl mx-auto px-4 py-8">
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8">
+              <!-- Welcome header -->
+              <div class="text-center mb-8">
+                <span class="text-4xl mb-3 block">🧠</span>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Welcome to NORMALAIZER!</h2>
+                <p class="text-sm text-gray-500">Real-time communication translation for everyone. Here's how it works:</p>
+              </div>
+
+              <!-- 3-step quick guide -->
+              <div class="flex flex-col sm:flex-row gap-4 mb-8">
+                <!-- Step 1 -->
+                <div class="flex-1 bg-indigo-50 rounded-xl p-5 text-center">
+                  <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 font-bold text-sm flex items-center justify-center mx-auto mb-3">1</div>
+                  <h3 class="text-sm font-bold text-gray-900 mb-1">Create or join a room</h3>
+                  <p class="text-xs text-gray-500 leading-relaxed">Start a conversation with friends, colleagues, or anyone. Public rooms are open to all.</p>
+                </div>
+                <!-- Step 2 -->
+                <div class="flex-1 bg-purple-50 rounded-xl p-5 text-center">
+                  <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 font-bold text-sm flex items-center justify-center mx-auto mb-3">2</div>
+                  <h3 class="text-sm font-bold text-gray-900 mb-1">Just chat naturally</h3>
+                  <p class="text-xs text-gray-500 leading-relaxed">Write messages in your own style. NORMALAIZER translates them for each reader automatically.</p>
+                </div>
+                <!-- Step 3 -->
+                <div class="flex-1 bg-green-50 rounded-xl p-5 text-center">
+                  <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 font-bold text-sm flex items-center justify-center mx-auto mb-3">3</div>
+                  <h3 class="text-sm font-bold text-gray-900 mb-1">Share & save</h3>
+                  <p class="text-xs text-gray-500 leading-relaxed">Create transcripts of important conversations and share them with a link.</p>
+                </div>
+              </div>
+
+              <!-- CTAs -->
+              <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                <button @click="showCreateRoom = true"
+                        class="px-6 py-3 text-sm font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition shadow-sm">
+                  Create Your First Room
+                </button>
+                <button @click="switchTab('browse'); sidebarOpen = true"
+                        class="px-6 py-3 text-sm font-semibold border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition">
+                  Browse Public Rooms
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Default state for returning users with rooms but none selected -->
+          <div x-show="rooms.length > 0 || loadingRooms" class="text-center px-4">
             <p class="text-4xl mb-3">💬</p>
             <p class="text-sm text-gray-400">Select a room to start chatting</p>
           </div>
+
         </div>
       </template>
 

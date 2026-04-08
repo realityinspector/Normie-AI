@@ -90,6 +90,61 @@ async def signup_page(request: Request):
     )
 
 
+@router.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(request: Request):
+    """Forgot password page with email form."""
+    return templates.TemplateResponse(request, "pages/forgot_password.html")
+
+
+@router.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page(request: Request):
+    """Reset password page with new password form."""
+    token = request.query_params.get("token", "")
+    return templates.TemplateResponse(
+        request, "pages/reset_password.html", {"token": token}
+    )
+
+
+@router.get("/translate", response_class=HTMLResponse)
+async def translate_page(request: Request):
+    """Standalone text translation page. Requires auth — redirects to /login if no session."""
+    session = _get_session_user(request)
+    if not session:
+        return RedirectResponse(url="/login?next=/translate", status_code=302)
+
+    display_name = await _get_display_name(session["user_id"])
+
+    return templates.TemplateResponse(
+        request,
+        "pages/translate.html",
+        {
+            "token": session["token"],
+            "user_id": session["user_id"],
+            "display_name": display_name,
+        },
+    )
+
+
+@router.get("/screenshot-translate", response_class=HTMLResponse)
+async def screenshot_translate_page(request: Request):
+    """Screenshot/image translation page. Requires auth — redirects to /login if no session."""
+    session = _get_session_user(request)
+    if not session:
+        return RedirectResponse(url="/login?next=/screenshot-translate", status_code=302)
+
+    display_name = await _get_display_name(session["user_id"])
+
+    return templates.TemplateResponse(
+        request,
+        "pages/screenshot_translate.html",
+        {
+            "token": session["token"],
+            "user_id": session["user_id"],
+            "display_name": display_name,
+        },
+    )
+
+
 @router.get("/app", response_class=HTMLResponse)
 async def app_page(request: Request):
     """Main chat application page. Requires auth — redirects to /login if no session."""

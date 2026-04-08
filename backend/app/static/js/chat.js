@@ -418,6 +418,7 @@ function chatApp(token, userId, displayName, initialRoomId) {
           type: 'send_message',
           text: text,
         }));
+        if (typeof track === 'function') track('message_sent', { room_id: this.currentRoomId });
         // Only clear input on successful send
         this.messageInput = '';
       } catch (e) {
@@ -473,6 +474,7 @@ function chatApp(token, userId, displayName, initialRoomId) {
         this.newRoomName = '';
         this.newRoomPublic = false;
         this.createRoomError = '';
+        if (typeof track === 'function') track('room_created', { room_id: mapped.id });
         this.selectRoom(mapped);
       } catch (e) {
         this.createRoomError = chatUserError(e, 'Could not create room. Please try again.');

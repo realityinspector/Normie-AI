@@ -1,0 +1,16 @@
+{
+  "name": "NORMALAIZER",
+  "short_name": "NORMALAIZER",
+  "description": "AI-powered communication translator",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

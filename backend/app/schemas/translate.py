@@ -1,5 +1,5 @@
 import enum
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TranslationDirection(str, enum.Enum):
@@ -8,7 +8,7 @@ class TranslationDirection(str, enum.Enum):
 
 
 class TranslateTextRequest(BaseModel):
-    text: str
+    text: str = Field(..., min_length=1)
     direction: TranslationDirection
     template: str | None = None
     custom_prompt: str | None = None

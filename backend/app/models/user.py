@@ -51,6 +51,12 @@ class User(Base):
     stripe_customer_id: Mapped[str | None] = mapped_column(
         String(255), unique=True, index=True, nullable=True, default=None
     )
+    password_reset_token: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, default=None
+    )
+    password_reset_expires: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

@@ -10,6 +10,8 @@
     <!-- Desktop nav links -->
     <div class="hidden sm:flex items-center gap-4 text-sm font-medium">
       <a href="/login" class="text-gray-600 hover:text-indigo-600 transition">Login</a>
+      <a href="/translate" class="text-gray-600 hover:text-indigo-600 transition">Translate</a>
+      <a href="/screenshot-translate" class="text-gray-600 hover:text-indigo-600 transition">Image</a>
       <a href="/pricing" class="text-gray-600 hover:text-indigo-600 transition">Pricing</a>
       <a href="/developers" class="text-gray-600 hover:text-indigo-600 transition">Developers</a>
     </div>
@@ -29,6 +31,8 @@
          class="absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-md sm:hidden">
       <div class="flex flex-col px-4 py-3 gap-3 text-sm font-medium">
         <a href="/login" @click="menuOpen = false" class="text-gray-600 hover:text-indigo-600 transition">Login</a>
+        <a href="/translate" @click="menuOpen = false" class="text-gray-600 hover:text-indigo-600 transition">Translate</a>
+        <a href="/screenshot-translate" @click="menuOpen = false" class="text-gray-600 hover:text-indigo-600 transition">Image</a>
         <a href="/pricing" @click="menuOpen = false" class="text-gray-600 hover:text-indigo-600 transition">Pricing</a>
         <a href="/developers" @click="menuOpen = false" class="text-gray-600 hover:text-indigo-600 transition">Developers</a>
       </div>

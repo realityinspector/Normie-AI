@@ -134,6 +134,7 @@ async def delete_room(
             status_code=403, detail="Only the owner can delete this room"
         )
     await db.delete(room)
+    await db.commit()
 
 
 @router.post("/{room_id}/join", response_model=RoomRead)

@@ -64,6 +64,27 @@
       <p x-show="errors.confirmPassword" x-text="errors.confirmPassword" class="mt-1 text-xs text-red-600"></p>
     </div>
 
+    <!-- Communication Style -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Communication Style</label>
+      <div class="grid grid-cols-2 gap-3">
+        <label @click="communicationStyle = 'autistic'"
+               class="cursor-pointer rounded-xl border-2 p-3 text-center transition"
+               :class="communicationStyle === 'autistic' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'">
+          <input type="radio" name="communication_style" value="autistic" x-model="communicationStyle" class="sr-only" />
+          <span class="block text-sm font-semibold text-gray-900">Neurodivergent (Autistic)</span>
+          <span class="block mt-1 text-xs text-gray-500">Free unlimited translations</span>
+        </label>
+        <label @click="communicationStyle = 'neurotypical'"
+               class="cursor-pointer rounded-xl border-2 p-3 text-center transition"
+               :class="communicationStyle === 'neurotypical' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'">
+          <input type="radio" name="communication_style" value="neurotypical" x-model="communicationStyle" class="sr-only" />
+          <span class="block text-sm font-semibold text-gray-900">Neurotypical</span>
+          <span class="block mt-1 text-xs text-gray-500">50 free credits to start</span>
+        </label>
+      </div>
+    </div>
+
     <!-- Submit -->
     <button type="submit" :disabled="loading"
             class="w-full flex items-center justify-center px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm shadow-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition">

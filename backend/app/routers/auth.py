@@ -1,4 +1,5 @@
 import logging
+import secrets
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -10,11 +11,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_db
-from app.models.user import User
+from app.models.user import CommunicationStyle, User
 from app.schemas.auth import (
     AppleSignInRequest,
+    ForgotPasswordRequest,
     GoogleSignInRequest,
     LoginRequest,
+    ResetPasswordRequest,
     SignupRequest,
     TokenResponse,
 )
@@ -103,10 +106,18 @@ async def signup(
         )
 
     settings = get_settings()
+    from app.utils.sanitize import sanitize_text
+
+    style = (
+        CommunicationStyle.autistic
+        if body.communication_style == "autistic"
+        else CommunicationStyle.neurotypical
+    )
     user = User(
-        display_name=body.display_name,
+        display_name=sanitize_text(body.display_name),
         email=body.email,
         password_hash=_hash_password(body.password),
+        communication_style=style,
         credit_balance=settings.initial_credits,
     )
     db.add(user)
@@ -347,8 +358,6 @@ async def dev_sign_in(
     user = result.scalar_one_or_none()
 
     if not user:
-        from app.models.user import CommunicationStyle
-
         style = (
             CommunicationStyle.autistic
             if body.communication_style == "autistic"
@@ -367,3 +376,97 @@ async def dev_sign_in(
 
     token, expires_in = _create_token(str(user.id))
     return TokenResponse(access_token=token, expires_in=expires_in)
+
+
+# --- Logout ---
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    """Clear the session cookie to log the user out."""
+    response.set_cookie(
+        key="session",
+        value="",
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=0,
+        path="/",
+    )
+    return {"status": "ok"}
+
+
+# --- Password Reset ---
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate a password reset token and log the reset URL."""
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(client_ip):
+        logger.warning("Rate limit hit: endpoint=forgot-password ip=%s", client_ip)
+        raise HTTPException(
+            status_code=429, detail="Too many requests. Try again in a minute."
+        )
+
+    result = await db.execute(select(User).where(User.email == body.email))
+    user = result.scalar_one_or_none()
+
+    if user:
+        token = secrets.token_urlsafe(32)
+        user.password_reset_token = token
+        user.password_reset_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+        await db.flush()
+        logger.info("Password reset link: /reset-password?token=%s", token)
+
+    # Always return the same response to prevent email enumeration
+    return {
+        "status": "ok",
+        "message": "If that email exists, a reset link has been sent.",
+    }
+
+
+@router.post("/reset-password")
+async def reset_password(
+    body: ResetPasswordRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Reset a user's password using a valid reset token."""
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(client_ip):
+        logger.warning("Rate limit hit: endpoint=reset-password ip=%s", client_ip)
+        raise HTTPException(
+            status_code=429, detail="Too many requests. Try again in a minute."
+        )
+
+    result = await db.execute(
+        select(User).where(User.password_reset_token == body.token)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token.",
+        )
+
+    if (
+        not user.password_reset_expires
+        or user.password_reset_expires < datetime.now(timezone.utc)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token.",
+        )
+
+    user.password_hash = _hash_password(body.new_password)
+    user.password_reset_token = None
+    user.password_reset_expires = None
+    await db.flush()
+
+    return {"status": "ok"}

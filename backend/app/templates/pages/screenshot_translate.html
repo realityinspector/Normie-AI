@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}NORMALAIZER – Screenshot Translate{% endblock %}
+
+{% block content %}
+<div class="flex flex-col min-h-screen" x-data="screenshotApp()" data-token="{{ token }}">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-200">
+    <nav class="flex items-center justify-between px-4 py-3">
+      <a href="/app" class="flex items-center gap-2 text-lg font-bold tracking-tight text-indigo-600">
+        <span class="text-2xl">🧠</span>
+        <span>NORMALAIZER</span>
+      </a>
+      <div class="flex items-center gap-4 text-sm font-medium">
+        <a href="/translate" class="text-gray-600 hover:text-indigo-600 transition">Text</a>
+        <a href="/app" class="text-gray-600 hover:text-indigo-600 transition">Chat</a>
+        <a href="/settings" class="text-gray-600 hover:text-indigo-600 transition">Settings</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Main content -->
+  <main class="flex-1 px-4 py-6 space-y-5">
+
+    <h1 class="text-xl font-bold text-gray-800 text-center">Screenshot Translate</h1>
+
+    <!-- Drop zone / file picker -->
+    <div
+      @click="$refs.fileInput.click()"
+      @dragover.prevent="dragOver = true"
+      @dragleave.prevent="dragOver = false"
+      @drop.prevent="handleDrop($event)"
+      :class="dragOver ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 bg-gray-50'"
+      class="relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 cursor-pointer transition hover:border-indigo-400 hover:bg-indigo-50/50"
+    >
+      <!-- Preview thumbnail -->
+      <template x-if="imagePreview">
+        <img :src="imagePreview" class="max-h-40 rounded-lg mb-3 object-contain" alt="Preview" />
+      </template>
+
+      <template x-if="!imagePreview">
+        <svg class="h-10 w-10 text-gray-400 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+        </svg>
+      </template>
+
+      <p class="text-sm text-gray-500" x-text="imageFile ? imageFile.name : 'Drop an image here or click to upload'"></p>
+      <p class="text-xs text-gray-400 mt-1">PNG, JPG, GIF, WebP &middot; Max 5MB</p>
+
+      <input
+        type="file"
+        x-ref="fileInput"
+        @change="handleFileSelect($event)"
+        accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+        class="hidden"
+      />
+    </div>
+
+    <!-- Direction picker -->
+    <div class="flex rounded-xl overflow-hidden border border-gray-200">
+      <button
+        @click="direction = 'autistic_to_neurotypical'"
+        :class="direction === 'autistic_to_neurotypical'
+          ? 'bg-indigo-600 text-white'
+          : 'bg-white text-gray-600 hover:bg-gray-50'"
+        class="flex-1 py-2.5 text-sm font-semibold transition text-center"
+      >
+        Autist &rarr; Normie
+      </button>
+      <button
+        @click="direction = 'neurotypical_to_autistic'"
+        :class="direction === 'neurotypical_to_autistic'
+          ? 'bg-indigo-600 text-white'
+          : 'bg-white text-gray-600 hover:bg-gray-50'"
+        class="flex-1 py-2.5 text-sm font-semibold transition text-center"
+      >
+        Normie &rarr; Autist
+      </button>
+    </div>
+
+    <!-- Template selector -->
+    <div>
+      <label for="template-select" class="block text-xs font-medium text-gray-500 mb-1">Template</label>
+      <select
+        id="template-select"
+        x-model="template"
+        class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      >
+        <option value="default">Default</option>
+        <option value="casual">Casual</option>
+        <option value="professional">Professional</option>
+        <option value="emotional">Emotional</option>
+        <option value="technical">Technical</option>
+        <option value="conflict">Conflict</option>
+      </select>
+    </div>
+
+    <!-- Translate button -->
+    <button
+      @click="translate()"
+      :disabled="!imageFile || loading"
+      :class="(!imageFile || loading)
+        ? 'bg-indigo-300 cursor-not-allowed'
+        : 'bg-indigo-600 hover:bg-indigo-700'"
+      class="w-full py-3 text-white text-sm font-semibold rounded-xl transition"
+    >
+      <span x-show="!loading">Translate Screenshot</span>
+      <span x-show="loading" class="flex items-center justify-center gap-2">
+        <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        Translating...
+      </span>
+    </button>
+
+    <!-- Error display -->
+    <p x-show="error" x-text="error" class="text-sm text-red-600 text-center"></p>
+
+    <!-- Result area -->
+    <template x-if="result">
+      <div class="space-y-3">
+        <!-- Extracted text -->
+        <div class="rounded-xl bg-gray-50 border border-gray-200 p-4">
+          <p class="text-xs font-medium text-gray-400 mb-1">Extracted Text</p>
+          <p class="text-sm text-gray-600 whitespace-pre-wrap" x-text="result.extracted_text"></p>
+        </div>
+
+        <!-- Translated text -->
+        <div class="rounded-xl bg-indigo-50 border border-indigo-200 p-4">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex-1">
+              <p class="text-xs font-medium text-indigo-400 mb-1">Translated</p>
+              <p class="text-sm text-indigo-900 whitespace-pre-wrap" x-text="result.translated_text"></p>
+            </div>
+            <button
+              @click="copyResult()"
+              class="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
+              x-text="copied ? 'Copied!' : 'Copy'"
+            ></button>
+          </div>
+        </div>
+
+        <!-- Credits remaining -->
+        <p class="text-xs text-gray-400 text-center">
+          Credits remaining: <span class="font-semibold text-gray-600" x-text="creditsRemaining"></span>
+        </p>
+      </div>
+    </template>
+
+  </main>
+</div>
+
+<script>
+function screenshotApp() {
+  return {
+    imageFile: null,
+    imagePreview: null,
+    dragOver: false,
+    direction: 'autistic_to_neurotypical',
+    template: 'default',
+    result: null,
+    loading: false,
+    error: '',
+    creditsRemaining: null,
+    copied: false,
+
+    get token() {
+      return this.$root.dataset.token;
+    },
+
+    validateFile(file) {
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        this.error = 'Invalid file type. Please upload a PNG, JPG, GIF, or WebP image.';
+        return false;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        this.error = 'File is too large. Maximum size is 5MB.';
+        return false;
+      }
+      return true;
+    },
+
+    setFile(file) {
+      this.error = '';
+      if (!this.validateFile(file)) return;
+      this.imageFile = file;
+      this.result = null;
+
+      const reader = new FileReader();
+      reader.onload = (e) => { this.imagePreview = e.target.result; };
+      reader.readAsDataURL(file);
+    },
+
+    handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (file) this.setFile(file);
+    },
+
+    handleDrop(event) {
+      this.dragOver = false;
+      const file = event.dataTransfer.files[0];
+      if (file) this.setFile(file);
+    },
+
+    async translate() {
+      if (!this.imageFile) return;
+      this.loading = true;
+      this.error = '';
+      this.result = null;
+      this.copied = false;
+
+      try {
+        const formData = new FormData();
+        formData.append('image', this.imageFile);
+        formData.append('direction', this.direction);
+        if (this.template && this.template !== 'default') {
+          formData.append('template', this.template);
+        }
+
+        const res = await fetch('/translate/image', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + this.token,
+          },
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error((data && data.detail) || 'Translation failed (' + res.status + ')');
+        }
+
+        const data = await res.json();
+        this.result = {
+          extracted_text: data.extracted_text,
+          translated_text: data.translated_text,
+        };
+        this.creditsRemaining = data.credits_remaining;
+      } catch (err) {
+        this.error = err.message || 'Something went wrong. Please try again.';
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async copyResult() {
+      if (!this.result) return;
+      try {
+        await navigator.clipboard.writeText(this.result.translated_text);
+        this.copied = true;
+        setTimeout(() => { this.copied = false; }, 2000);
+      } catch {
+        this.error = 'Failed to copy to clipboard.';
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

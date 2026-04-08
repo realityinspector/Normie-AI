@@ -87,6 +87,7 @@ function googleSignIn(clientId, nextUrl) {
         }
 
         // Success — redirect to next URL or app
+        if (typeof track === 'function') track('login', { method: 'google' });
         window.location.href = this.nextUrl || "/app";
       } catch (err) {
         this.googleError = userErrorMessage(err);
@@ -154,6 +155,7 @@ function loginForm(nextUrl) {
         }
 
         // Success — redirect to next URL or app
+        if (typeof track === 'function') track('login', { method: 'email' });
         window.location.href = this.nextUrl || "/app";
       } catch (err) {
         this.errorMessage = userErrorMessage(err);
@@ -170,6 +172,7 @@ function signupForm(nextUrl) {
     displayName: "",
     password: "",
     confirmPassword: "",
+    communicationStyle: "neurotypical",
     loading: false,
     errorMessage: "",
     nextUrl: nextUrl || "",
@@ -236,6 +239,7 @@ function signupForm(nextUrl) {
             email: this.email.trim(),
             display_name: this.displayName.trim(),
             password: this.password,
+            communication_style: this.communicationStyle,
           }),
         }, 15000);
 
@@ -247,6 +251,7 @@ function signupForm(nextUrl) {
         }
 
         // Success — redirect to next URL or app
+        if (typeof track === 'function') track('signup');
         window.location.href = this.nextUrl || "/app";
       } catch (err) {
         this.errorMessage = userErrorMessage(err);

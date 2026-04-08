@@ -6,6 +6,8 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response as StarletteResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import text
@@ -14,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.database import get_db
 from app.routers import (
+    analytics,
     auth,
     users,
     rooms,
@@ -92,6 +95,29 @@ cors_origins = (
 if "http://localhost:8000" not in cors_origins:
     cors_origins.append("http://localhost:8000")
 
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response: StarletteResponse = await call_next(request)
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net accounts.google.com; "
+            "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; "
+            "img-src 'self' data: blob:; "
+            "connect-src 'self' wss: ws:; "
+            "frame-src accounts.google.com"
+        )
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -117,6 +143,7 @@ app.include_router(stripe_webhooks.router, tags=["stripe"])
 app.include_router(stripe_checkout.router, prefix="/stripe", tags=["stripe"])
 app.include_router(api_v1.router, prefix="/api/v1", tags=["developer-api"])
 app.include_router(integrations_router, prefix="/integrations", tags=["integrations"])
+app.include_router(analytics.router, tags=["analytics"])
 
 # --- Pages (HTML) router — mounted last, no prefix, so / serves the landing page ---
 app.include_router(pages.router, tags=["pages"])

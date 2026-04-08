@@ -1,6 +1,8 @@
 import uuid
 import json
 import logging
+import time
+from collections import defaultdict
 from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 import jwt as pyjwt
@@ -14,11 +16,27 @@ from app.models.message import Message
 from app.services.claude_translate import translate_text
 from app.services.credit_manager import check_and_deduct
 from app.services.connection_manager import manager
+from app.utils.sanitize import sanitize_text
 from fastapi import HTTPException
 
 logger = logging.getLogger("normalaizer")
 
 router = APIRouter()
+
+_MESSAGE_RATE_LIMIT = 20
+_MESSAGE_RATE_WINDOW = 60
+_rate_limit_tracker: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_ws_rate_limit(user_id: uuid.UUID, room_id: uuid.UUID) -> bool:
+    key = f"{user_id}:{room_id}"
+    now = time.monotonic()
+    timestamps = _rate_limit_tracker[key]
+    _rate_limit_tracker[key] = [t for t in timestamps if now - t < _MESSAGE_RATE_WINDOW]
+    if len(_rate_limit_tracker[key]) >= _MESSAGE_RATE_LIMIT:
+        return False
+    _rate_limit_tracker[key].append(now)
+    return True
 
 
 async def _authenticate_ws(token: str) -> uuid.UUID | None:
@@ -97,7 +115,20 @@ async def chat_websocket(
             data = json.loads(raw)
 
             if data.get("type") == "send_message":
-                text = data.get("text", "").strip()
+                if not _check_ws_rate_limit(user_id, room_id):
+                    await manager.send_to_user(
+                        room_id,
+                        user_id,
+                        {
+                            "type": "error",
+                            "data": {
+                                "message": "Rate limit exceeded. Please slow down.",
+                            },
+                        },
+                    )
+                    continue
+
+                text = sanitize_text(data.get("text", ""))
                 if not text:
                     continue
 
