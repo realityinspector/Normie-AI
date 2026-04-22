@@ -178,5 +178,83 @@ async def main() -> int:
     return 0
 
 
+async def test_late_joiner_sees_translation():
+    """
+    Scenario that shipped broken: user A (autistic) sends a message while
+    alone in a room. User B (neurotypical) joins later and fetches history
+    via GET /rooms/{id}/messages. B must see the message translated to
+    their style, not the raw autistic-style original.
+    """
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        ctx_a = await browser.new_context(viewport={"width": 1440, "height": 900})  # type: ignore[arg-type]
+        page_a = await ctx_a.new_page()
+        ctx_b = await browser.new_context(viewport={"width": 1440, "height": 900})  # type: ignore[arg-type]
+        page_b = await ctx_b.new_page()
+
+        t = int(time.time())
+        # A: autistic-style sender
+        await page_a.request.post(
+            f"{BASE}/auth/signup",
+            data=json.dumps({"email": f"a-{t}@test.dev", "password": "Test12345!",
+                             "display_name": "UserA",
+                             "communication_style": "autistic"}),
+            headers={"Content-Type": "application/json"})
+        # B: neurotypical-style late joiner
+        await page_b.request.post(
+            f"{BASE}/auth/signup",
+            data=json.dumps({"email": f"b-{t}@test.dev", "password": "Test12345!",
+                             "display_name": "UserB",
+                             "communication_style": "neurotypical"}),
+            headers={"Content-Type": "application/json"})
+
+        # A creates a public room, sends a terse message alone, captures the room id
+        await page_a.goto(f"{BASE}/app", wait_until="domcontentloaded")
+        await page_a.wait_for_timeout(1500)
+        await page_a.click("button:has-text('Create Your First Room')")
+        await page_a.wait_for_timeout(400)
+        await page_a.locator("input[placeholder*='Team Chat']").fill("Late Join Room")
+        await page_a.locator("form button[type='submit']").first.click()
+        await page_a.wait_for_timeout(2500)
+        room_url = page_a.url
+        assert "/room/" in room_url, f"A never navigated into room: {room_url}"
+        await page_a.locator("textarea").first.fill("The build is broken. Fix now.")
+        await page_a.locator("form button[type='submit']").first.click()
+        await page_a.wait_for_timeout(4000)
+
+        # B joins by opening the same URL after auth, then reads history
+        await page_b.goto(room_url, wait_until="domcontentloaded")
+        await page_b.wait_for_timeout(3500)
+        b_text = await page_b.locator("main").inner_text()
+
+        failures: list[str] = []
+        # B must NOT see A's raw autistic-style "Fix now." — they should see
+        # the translated neurotypical version. The translated version shouldn't
+        # contain the exact curt phrasing.
+        if "Fix now" in b_text:
+            failures.append(
+                f"late joiner saw raw untranslated text: {b_text[:400]!r}"
+            )
+        # And B should see some translated content (length sanity)
+        if len(b_text.strip()) < 30:
+            failures.append(f"late joiner main area nearly empty: {b_text!r}")
+
+        await ctx_a.close()
+        await ctx_b.close()
+        await browser.close()
+        return failures
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    # Run both: multi-viewport solo flow + late-joiner two-user scenario
+    code = asyncio.run(main())
+    print("\n-- late joiner scenario --")
+    fs = asyncio.run(test_late_joiner_sees_translation())
+    if fs:
+        print("[late-joiner] FAIL")
+        for f in fs:
+            print(f"  {f}")
+        code = 1
+    else:
+        print("[late-joiner] PASS")
+    sys.exit(code)
