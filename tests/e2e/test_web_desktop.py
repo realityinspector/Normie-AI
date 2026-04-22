@@ -113,6 +113,23 @@ async def run_one(browser, label: str, viewport: dict) -> list[str]:
                     f"[{label}] Alpine 'single root element' warning — "
                     f"message bubble partial regressed: {alpine_warnings}"
                 )
+            # Solo-in-room: server should send a preview translation so the
+            # chat doesn't look dead. Assert the preview bubble appears.
+            async def has_preview():
+                return await page.evaluate(
+                    "document.body.innerText.toLowerCase().includes('preview')"
+                )
+            preview_seen = False
+            for _ in range(45):
+                if await has_preview():
+                    preview_seen = True
+                    break
+                await page.wait_for_timeout(1000)
+            if not preview_seen:
+                failures.append(
+                    f"[{label}] solo-room preview bubble never appeared — "
+                    "chat feels dead when alone in a room"
+                )
 
     # /translate — submit and verify a real result appears
     await page.goto(f"{BASE}/translate", wait_until="domcontentloaded")

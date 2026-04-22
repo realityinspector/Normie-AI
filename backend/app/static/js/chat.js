@@ -318,12 +318,27 @@ function chatApp(token, userId, displayName, initialRoomId) {
             text: text,
             is_own: isOwn,
             time: this.formatTime(d.created_at),
+            preview_text: null,
+            preview_style: null,
           });
 
           this.$nextTick(() => this.scrollToBottom());
 
           // Remove typing indicator for this sender
           this.typingUsers = this.typingUsers.filter(n => n !== d.sender_name);
+          break;
+        }
+
+        case 'preview': {
+          // Sender-only event: how this message reads in the opposite style.
+          // Only shown when no one else in a different style is in the room.
+          const d = payload.data;
+          const msg = this.messages.find(m => m.id === d.message_id);
+          if (msg) {
+            msg.preview_text = d.preview_text;
+            msg.preview_style = d.preview_style;
+            this.$nextTick(() => this.scrollToBottom());
+          }
           break;
         }
 

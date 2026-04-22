@@ -341,6 +341,44 @@ async def chat_websocket(
                                 },
                             )
 
+                    # If there is no one else in a different style, show the sender
+                    # a preview of how their message would read in the opposite style,
+                    # so solo rooms are not visually dead and users can self-check tone.
+                    other_style_recipients = any(
+                        rp.user_id != user_id
+                        and rp.user is not None
+                        and rp.user.communication_style != user.communication_style
+                        for rp in room.participants
+                    )
+                    if not other_style_recipients:
+                        opposite = (
+                            CommunicationStyle.neurotypical
+                            if user.communication_style == CommunicationStyle.autistic
+                            else CommunicationStyle.autistic
+                        )
+                        try:
+                            preview = await translate_text(
+                                text, user.communication_style, opposite
+                            )
+                            await manager.send_to_user(
+                                room_id,
+                                user_id,
+                                {
+                                    "type": "preview",
+                                    "data": {
+                                        "message_id": str(msg.id),
+                                        "preview_text": preview,
+                                        "preview_style": opposite.value,
+                                    },
+                                },
+                            )
+                        except Exception:
+                            logger.exception(
+                                "Preview translation failed: user_id=%s room_id=%s",
+                                user_id,
+                                room_id,
+                            )
+
     except WebSocketDisconnect:
         logger.info(
             "WebSocket disconnected normally: user_id=%s room_id=%s",
