@@ -80,6 +80,7 @@ struct TextTranslateView: View {
             }
             .padding()
         }
+        .scrollDismissesKeyboard(.immediately)
         .navigationTitle("Text Translate")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

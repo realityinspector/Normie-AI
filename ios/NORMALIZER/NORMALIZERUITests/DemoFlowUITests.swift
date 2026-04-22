@@ -61,6 +61,13 @@ final class DemoFlowUITests: XCTestCase {
         let creditsLabel = app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'credits left'")).firstMatch
         let resultById = app.staticTexts["translate.result"]
         let appeared = creditsLabel.waitForExistence(timeout: 60) || resultById.waitForExistence(timeout: 5)
+        // Dismiss keyboard via drag from mid-screen downward.
+        if app.keyboards.count > 0 {
+            let top = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+            let bottom = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95))
+            top.press(forDuration: 0.1, thenDragTo: bottom)
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.8))
         attachScreenshot(app, name: "03-translate-result")
         XCTAssertTrue(appeared, "Translation result should render within 65s")
 
@@ -105,6 +112,11 @@ final class DemoFlowUITests: XCTestCase {
         // Wait for the message to render somewhere on-screen.
         let messageText = app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'Hello from UITest' OR label CONTAINS 'UITest'")).firstMatch
         _ = messageText.waitForExistence(timeout: 30)
+        // Dismiss keyboard for a clean demo screenshot.
+        if app.keyboards.count > 0 {
+            app.swipeDown()
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
         attachScreenshot(app, name: "05-chat-message-sent")
 
         // Back to Rooms list.
