@@ -71,6 +71,49 @@ async def run_one(browser, label: str, viewport: dict) -> list[str]:
                 f"dims={dims}"
             )
 
+    # /app — chat flow: create room, send message, assert bubble renders.
+    # The earlier bug was the message-bubble partial having two root <template>
+    # elements inside an x-for, which Alpine silently drops so sent messages
+    # never appeared on screen.
+    if viewport["width"] >= 640:  # chat requires room creation; skip on phones for now
+        errors_chat: list[str] = []
+        page.once("pageerror", lambda e: errors_chat.append(f"pageerror: {e}"))
+        alpine_warnings: list[str] = []
+
+        def on_console(m):  # type: ignore[no-untyped-def]
+            if "Alpine" in m.text and "single root element" in m.text:
+                alpine_warnings.append(m.text)
+
+        page.on("console", on_console)
+
+        await page.goto(f"{BASE}/app", wait_until="domcontentloaded")
+        await page.wait_for_timeout(1500)
+        await page.click("button:has-text('Create Your First Room')")
+        await page.wait_for_timeout(500)
+        # Modal now visible — fill the name and submit the form.
+        await page.locator("input[placeholder*='Team Chat']").fill("E2E Room")
+        await page.locator("form button[type='submit']").first.click()
+        await page.wait_for_timeout(2500)
+
+        ta = page.locator("textarea").first
+        if await ta.count() == 0:
+            failures.append(f"[{label}] /app never entered the room (no textarea)")
+        else:
+            await ta.fill("Hello from E2E")
+            await page.locator("form button[type='submit']").first.click()
+            try:
+                await page.wait_for_selector("text=Hello from E2E", timeout=15_000)
+            except Exception:
+                failures.append(
+                    f"[{label}] sent message never rendered. "
+                    f"Alpine warnings: {alpine_warnings}"
+                )
+            if alpine_warnings:
+                failures.append(
+                    f"[{label}] Alpine 'single root element' warning — "
+                    f"message bubble partial regressed: {alpine_warnings}"
+                )
+
     # /translate — submit and verify a real result appears
     await page.goto(f"{BASE}/translate", wait_until="domcontentloaded")
     await page.wait_for_timeout(1200)
