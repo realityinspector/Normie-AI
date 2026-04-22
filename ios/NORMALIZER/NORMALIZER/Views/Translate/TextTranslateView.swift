@@ -37,6 +37,7 @@ struct TextTranslateView: View {
                             RoundedRectangle(cornerRadius: 8)
                                 .stroke(.quaternary)
                         )
+                        .accessibilityIdentifier("translate.input")
                 }
 
                 // Translate button
@@ -58,6 +59,7 @@ struct TextTranslateView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .disabled(vm.inputText.isEmpty || vm.isLoading)
+                .accessibilityIdentifier("translate.button")
 
                 // Result
                 if let result = vm.result {

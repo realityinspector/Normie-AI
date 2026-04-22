@@ -19,6 +19,16 @@ struct NORMALIZERApp: App {
             .environment(authViewModel)
             .environment(storeViewModel)
             .task {
+                #if DEBUG
+                if CommandLine.arguments.contains("-uitest-autologin") {
+                    Keychain.accessToken = nil
+                    await authViewModel.devSignIn(name: "UITest User", style: .autistic)
+                    authViewModel.isLoading = false
+                    storeViewModel.listenForTransactions()
+                    await storeViewModel.loadProducts()
+                    return
+                }
+                #endif
                 await authViewModel.checkExistingAuth()
                 storeViewModel.listenForTransactions()
                 await storeViewModel.loadProducts()

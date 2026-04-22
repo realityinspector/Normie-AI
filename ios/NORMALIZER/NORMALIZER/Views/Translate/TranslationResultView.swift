@@ -23,6 +23,7 @@ struct TranslationResultView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.accentColor.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+                .accessibilityIdentifier("translate.result")
 
             HStack(spacing: 12) {
                 Button {

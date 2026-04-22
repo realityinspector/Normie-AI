@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		058B8C118FB5E2ADB7F0B7F6 /* DemoFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 995B3206263B8D4CDF5CAC09 /* DemoFlowUITests.swift */; };
 		A10001010000000000000001 /* NORMALIZERApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002010000000000000001 /* NORMALIZERApp.swift */; };
 		A10001010000000000000002 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002010000000000000002 /* AppConfig.swift */; };
 		A10001010000000000000003 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002010000000000000003 /* Keychain.swift */; };
@@ -51,9 +52,21 @@
 		A10001010000000000000050 /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10002010000000000000050 /* AuthenticationServices.framework */; };
 		A10001010000000000000051 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10002010000000000000051 /* StoreKit.framework */; };
 		A10001010000000000000052 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10002010000000000000052 /* Security.framework */; };
+		CF022B08C3405C994E6F4478 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DF56C09E061354EAA149B59F /* Foundation.framework */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		207D987C41C1309CA2B92236 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10008010000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10005010000000000000001;
+			remoteInfo = NORMALIZER;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		995B3206263B8D4CDF5CAC09 /* DemoFlowUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DemoFlowUITests.swift; sourceTree = "<group>"; };
 		A10002010000000000000001 /* NORMALIZERApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NORMALIZERApp.swift; sourceTree = "<group>"; };
 		A10002010000000000000002 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		A10002010000000000000003 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
@@ -101,9 +114,19 @@
 		A10002010000000000000051 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		A10002010000000000000052 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		A10002010000000000000099 /* NORMALIZER.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NORMALIZER.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D57AA7537EABE207033FFECA /* NORMALIZERUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NORMALIZERUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DF56C09E061354EAA149B59F /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		23FE05138FE257DDB68229A9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CF022B08C3405C994E6F4478 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A10003010000000000000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -117,31 +140,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		60D0EB2C7CC732089EEEF525 /* NORMALIZERUITests */ = {
+			isa = PBXGroup;
+			children = (
+				995B3206263B8D4CDF5CAC09 /* DemoFlowUITests.swift */,
+			);
+			name = NORMALIZERUITests;
+			path = NORMALIZERUITests;
+			sourceTree = "<group>";
+		};
 		A10004010000000000000001 = {
 			isa = PBXGroup;
 			children = (
 				A10004010000000000000002 /* NORMALIZER */,
 				A10004010000000000000099 /* Products */,
 				A10004010000000000000060 /* Frameworks */,
+				60D0EB2C7CC732089EEEF525 /* NORMALIZERUITests */,
 			);
-			sourceTree = "<group>";
-		};
-		A10004010000000000000099 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				A10002010000000000000099 /* NORMALIZER.app */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		A10004010000000000000060 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				A10002010000000000000050 /* AuthenticationServices.framework */,
-				A10002010000000000000051 /* StoreKit.framework */,
-				A10002010000000000000052 /* Security.framework */,
-			);
-			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		A10004010000000000000002 /* NORMALIZER */ = {
@@ -314,9 +329,55 @@
 			path = Translate;
 			sourceTree = "<group>";
 		};
+		A10004010000000000000060 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A10002010000000000000050 /* AuthenticationServices.framework */,
+				A10002010000000000000051 /* StoreKit.framework */,
+				A10002010000000000000052 /* Security.framework */,
+				E3E1D9CB19BE6557FFD5B833 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A10004010000000000000099 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10002010000000000000099 /* NORMALIZER.app */,
+				D57AA7537EABE207033FFECA /* NORMALIZERUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E3E1D9CB19BE6557FFD5B833 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				DF56C09E061354EAA149B59F /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		91ACC9EE4FC334DB53FEA35B /* NORMALIZERUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 557A3C89ECA5E4174DED8DA7 /* Build configuration list for PBXNativeTarget "NORMALIZERUITests" */;
+			buildPhases = (
+				C87B9A912B9EA6812A6B0EB2 /* Sources */,
+				23FE05138FE257DDB68229A9 /* Frameworks */,
+				1BD1BD1DC0C166BB8C4E5BD3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FBE08222C76D646236929DAD /* PBXTargetDependency */,
+			);
+			name = NORMALIZERUITests;
+			productName = NORMALIZERUITests;
+			productReference = D57AA7537EABE207033FFECA /* NORMALIZERUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		A10005010000000000000001 /* NORMALIZER */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A10007010000000000000001 /* Build configuration list for PBXNativeTarget "NORMALIZER" */;
@@ -363,11 +424,19 @@
 			projectRoot = "";
 			targets = (
 				A10005010000000000000001 /* NORMALIZER */,
+				91ACC9EE4FC334DB53FEA35B /* NORMALIZERUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		1BD1BD1DC0C166BB8C4E5BD3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A10006010000000000000002 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -426,9 +495,55 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C87B9A912B9EA6812A6B0EB2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				058B8C118FB5E2ADB7F0B7F6 /* DemoFlowUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		FBE08222C76D646236929DAD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = NORMALIZER;
+			target = A10005010000000000000001 /* NORMALIZER */;
+			targetProxy = 207D987C41C1309CA2B92236 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		3D42EFCC3ACDFBD08DFCEB1A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = NORMALIZERUITests;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.normalizer.app.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = NORMALIZER;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		A10009010000000000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -616,14 +731,42 @@
 			};
 			name = Release;
 		};
+		A73B00B2684434284A9942CE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = NORMALIZERUITests;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.normalizer.app.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = NORMALIZER;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A10007010000000000000002 /* Build configuration list for PBXProject "NORMALIZER" */ = {
+		557A3C89ECA5E4174DED8DA7 /* Build configuration list for PBXNativeTarget "NORMALIZERUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				A10009010000000000000001 /* Debug */,
-				A10009010000000000000002 /* Release */,
+				3D42EFCC3ACDFBD08DFCEB1A /* Release */,
+				A73B00B2684434284A9942CE /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -633,6 +776,15 @@
 			buildConfigurations = (
 				A10009010000000000000003 /* Debug */,
 				A10009010000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10007010000000000000002 /* Build configuration list for PBXProject "NORMALIZER" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10009010000000000000001 /* Debug */,
+				A10009010000000000000002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

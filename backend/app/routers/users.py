@@ -4,6 +4,7 @@ from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.models.user import User
 from app.schemas.user import UserRead, UserUpdate
+from app.utils.sanitize import sanitize_text
 
 router = APIRouter()
 
@@ -20,7 +21,7 @@ async def update_me(
     db: AsyncSession = Depends(get_db),
 ):
     if body.display_name is not None:
-        user.display_name = body.display_name
+        user.display_name = sanitize_text(body.display_name)
     if body.communication_style is not None:
         user.communication_style = body.communication_style
     return user

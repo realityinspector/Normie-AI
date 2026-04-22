@@ -19,6 +19,7 @@ struct TranscriptListView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(transcript.roomName)
                                 .font(.headline)
+                                .accessibilityIdentifier("transcript.row.\(transcript.roomName)")
                             HStack {
                                 Label("\(transcript.messageCount) messages", systemImage: "message")
                                     .font(.caption)

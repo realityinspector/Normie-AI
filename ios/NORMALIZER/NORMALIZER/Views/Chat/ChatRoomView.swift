@@ -41,6 +41,7 @@ struct ChatRoomView: View {
             HStack(spacing: 12) {
                 TextField("Type a message...", text: $vm.inputText)
                     .textFieldStyle(.roundedBorder)
+                    .accessibilityIdentifier("chat.input")
                     .onSubmit {
                         Task { await vm.sendMessage() }
                     }
@@ -52,6 +53,7 @@ struct ChatRoomView: View {
                         .font(.title2)
                 }
                 .disabled(vm.inputText.trimmingCharacters(in: .whitespaces).isEmpty || vm.isSending)
+                .accessibilityIdentifier("chat.send")
             }
             .padding()
         }

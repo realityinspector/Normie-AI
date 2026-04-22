@@ -23,6 +23,7 @@ struct HomeView: View {
                             color: .blue
                         )
                     }
+                    .accessibilityIdentifier("home.card.text_translate")
 
                     NavigationLink {
                         ScreenshotTranslateView()
@@ -34,6 +35,7 @@ struct HomeView: View {
                             color: .purple
                         )
                     }
+                    .accessibilityIdentifier("home.card.screenshot_translate")
 
                     NavigationLink {
                         RoomListView()
@@ -45,6 +47,7 @@ struct HomeView: View {
                             color: .green
                         )
                     }
+                    .accessibilityIdentifier("home.card.chat_rooms")
 
                     NavigationLink {
                         TranscriptListView()
@@ -56,6 +59,7 @@ struct HomeView: View {
                             color: .orange
                         )
                     }
+                    .accessibilityIdentifier("home.card.transcripts")
                 }
                 .padding(.horizontal)
             }

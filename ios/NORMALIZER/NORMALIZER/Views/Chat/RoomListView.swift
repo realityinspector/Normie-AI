@@ -36,6 +36,7 @@ struct RoomListView: View {
                                 }
                             }
                         }
+                        .accessibilityIdentifier("room.link.\(room.name)")
                     }
                     .onDelete { indexSet in
                         Task {
@@ -58,6 +59,7 @@ struct RoomListView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
+                .accessibilityIdentifier("room.create.button")
             }
         }
         .sheet(isPresented: $vm.showCreateSheet) {
