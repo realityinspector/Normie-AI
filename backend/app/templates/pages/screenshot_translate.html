@@ -2,6 +2,12 @@
 
 {% block title %}NORMALAIZER – Screenshot Translate{% endblock %}
 
+{% block layout %}
+<div class="w-full max-w-3xl mx-auto min-h-screen bg-white shadow-lg sm:shadow-xl">
+  {{ self.content() }}
+</div>
+{% endblock %}
+
 {% block content %}
 <div class="flex flex-col min-h-screen" x-data="screenshotApp()" data-token="{{ token }}">
 

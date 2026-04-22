@@ -33,12 +33,13 @@
   <!-- Alpine.js v3 — loaded AFTER page scripts so component functions are defined first -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-start justify-center">
+<body class="{% block body_class %}bg-gray-100 min-h-screen flex items-start justify-center{% endblock %}">
 
-  <!-- Phone-frame layout: full-width on mobile, centered card on desktop -->
+  {% block layout %}
   <div class="w-full max-w-md mx-auto min-h-screen bg-white shadow-lg sm:shadow-xl">
     {% block content %}{% endblock %}
   </div>
+  {% endblock %}
 
 </body>
 </html>

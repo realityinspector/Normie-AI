@@ -2,6 +2,14 @@
 
 {% block title %}NORMALAIZER – Chat{% endblock %}
 
+{% block body_class %}bg-gray-100 min-h-screen{% endblock %}
+
+{% block layout %}
+<div class="w-full h-screen bg-white">
+  {{ self.content() }}
+</div>
+{% endblock %}
+
 {% block head %}
 <script src="/static/js/chat.js?v=2" defer></script>
 <style>
