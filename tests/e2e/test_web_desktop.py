@@ -214,6 +214,8 @@ async def test_late_joiner_sees_translation():
         await page_a.click("button:has-text('Create Your First Room')")
         await page_a.wait_for_timeout(400)
         await page_a.locator("input[placeholder*='Team Chat']").fill("Late Join Room")
+        # Tick "Public room" so user B can reach it without an invite.
+        await page_a.locator("input[type='checkbox']").check()
         await page_a.locator("form button[type='submit']").first.click()
         await page_a.wait_for_timeout(2500)
         room_url = page_a.url
@@ -222,10 +224,17 @@ async def test_late_joiner_sees_translation():
         await page_a.locator("form button[type='submit']").first.click()
         await page_a.wait_for_timeout(4000)
 
-        # B joins by opening the same URL after auth, then reads history
+        # B joins by opening the same URL after auth, then reads history.
+        # History fetch now translates on-demand for late joiners, which can
+        # take several seconds per message — poll until it's clearly loaded.
         await page_b.goto(room_url, wait_until="domcontentloaded")
-        await page_b.wait_for_timeout(3500)
-        b_text = await page_b.locator("main").inner_text()
+        for _ in range(40):
+            b_text = await page_b.locator("main").inner_text()
+            if len(b_text.strip()) > 50 and "Loading messages" not in b_text:
+                break
+            await page_b.wait_for_timeout(500)
+        else:
+            b_text = await page_b.locator("main").inner_text()
 
         failures: list[str] = []
         # B must NOT see A's raw autistic-style "Fix now." — they should see
@@ -238,6 +247,25 @@ async def test_late_joiner_sees_translation():
         # And B should see some translated content (length sanity)
         if len(b_text.strip()) < 30:
             failures.append(f"late joiner main area nearly empty: {b_text!r}")
+
+        # Read receipts: once B has opened the room and its client sends the
+        # `read` event, A's own-message bubble should render the double-check
+        # indicator. Check that A's DOM exposes a read tooltip mentioning
+        # UserB within a few seconds.
+        read_seen = False
+        for _ in range(20):
+            a_has_read = await page_a.evaluate(
+                """() => Array.from(document.querySelectorAll('[title]'))
+                    .some(e => /^Read by /.test(e.getAttribute('title') || ''))"""
+            )
+            if a_has_read:
+                read_seen = True
+                break
+            await page_a.wait_for_timeout(500)
+        if not read_seen:
+            failures.append(
+                "sender never saw 'Read by <peer>' indicator after peer loaded the room"
+            )
 
         await ctx_a.close()
         await ctx_b.close()

@@ -65,6 +65,11 @@ function chatApp(token, userId, displayName, initialRoomId) {
     messages: [],
     loadingMessages: false,
     messageInput: '',
+    // Read receipts: { [otherUserId]: { name, last_read_at: ISO } }
+    readReceipts: {},
+    // Last message id we've reported as read to the server, to avoid
+    // spamming the socket with duplicate reads.
+    lastSentReadMessageId: null,
 
     // WebSocket
     ws: null,
@@ -123,10 +128,19 @@ function chatApp(token, userId, displayName, initialRoomId) {
           // Room may not be in user's list yet — try to join/load anyway
           this.currentRoomId = initialRoomId;
           this.currentRoomName = 'Loading...';
+          this.readReceipts = {};
+          this.lastSentReadMessageId = null;
           await this.fetchMessages();
           this.connectWebSocket();
+          setTimeout(() => this.markLatestIncomingRead(), 800);
         }
       }
+
+      // When the tab becomes visible again, mark the latest incoming
+      // message in the current room as read.
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) this.markLatestIncomingRead();
+      });
     },
 
     // ─── Room List ───
@@ -165,6 +179,8 @@ function chatApp(token, userId, displayName, initialRoomId) {
       this.currentRoomId = room.id;
       this.currentRoomName = room.name;
       this.messages = [];
+      this.readReceipts = {};
+      this.lastSentReadMessageId = null;
       this.sidebarOpen = false;
 
       // Update URL without reload
@@ -172,6 +188,8 @@ function chatApp(token, userId, displayName, initialRoomId) {
 
       await this.fetchMessages();
       this.connectWebSocket();
+      // After WS connects and history loads, mark the latest incoming as read.
+      setTimeout(() => this.markLatestIncomingRead(), 800);
     },
 
     // ─── Messages ───
@@ -207,6 +225,9 @@ function chatApp(token, userId, displayName, initialRoomId) {
         text: text,
         is_own: isOwn,
         time: this.formatTime(m.created_at),
+        created_at: m.created_at,
+        preview_text: null,
+        preview_style: null,
       };
     },
 
@@ -318,6 +339,7 @@ function chatApp(token, userId, displayName, initialRoomId) {
             text: text,
             is_own: isOwn,
             time: this.formatTime(d.created_at),
+            created_at: d.created_at,
             preview_text: null,
             preview_style: null,
           });
@@ -326,6 +348,12 @@ function chatApp(token, userId, displayName, initialRoomId) {
 
           // Remove typing indicator for this sender
           this.typingUsers = this.typingUsers.filter(n => n !== d.sender_name);
+
+          // If this is an incoming message (not our own) and the room is
+          // actually being looked at, mark it read immediately.
+          if (!isOwn && !document.hidden && this.currentRoomId === this.currentRoomId) {
+            this.markRead(d.id);
+          }
           break;
         }
 
@@ -339,6 +367,18 @@ function chatApp(token, userId, displayName, initialRoomId) {
             msg.preview_style = d.preview_style;
             this.$nextTick(() => this.scrollToBottom());
           }
+          break;
+        }
+
+        case 'read_receipt': {
+          // A peer has read up to last_read_at. We store it so own messages
+          // with created_at <= last_read_at render with a "Read" indicator.
+          const d = payload.data;
+          if (d.user_id === this.userId) break;  // our own read — ignore
+          this.readReceipts[d.user_id] = {
+            name: d.display_name || '',
+            last_read_at: d.last_read_at,
+          };
           break;
         }
 
@@ -595,6 +635,60 @@ function chatApp(token, userId, displayName, initialRoomId) {
       if (container) {
         container.scrollTop = container.scrollHeight;
       }
+    },
+
+    /**
+     * Tell the server we've read up to this message id.
+     * The server persists last_read_at and broadcasts read_receipt.
+     */
+    markRead(messageId) {
+      if (!messageId) return;
+      if (messageId === this.lastSentReadMessageId) return;
+      if (!this.wsConnected || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        // Socket not open yet — retry shortly. selectRoom schedules
+        // markLatestIncomingRead 800ms after connectWebSocket, which can
+        // still race the handshake on slow links.
+        setTimeout(() => this.markRead(messageId), 500);
+        return;
+      }
+      this.lastSentReadMessageId = messageId;
+      try {
+        this.ws.send(JSON.stringify({ type: 'read', message_id: messageId }));
+      } catch (_err) { /* ignore */ }
+    },
+
+    /**
+     * Find the newest incoming (not-own) message in the current buffer
+     * and mark it read. Called on room entry and on tab visibility.
+     */
+    markLatestIncomingRead() {
+      for (let i = this.messages.length - 1; i >= 0; i--) {
+        const m = this.messages[i];
+        if (m && !m.is_own && !m.is_system && m.id) {
+          this.markRead(m.id);
+          return;
+        }
+      }
+    },
+
+    /**
+     * For an own message, return the name of a peer who has read past it,
+     * or null. Used to render "Read by <name>" / "Read".
+     */
+    readerFor(msg) {
+      if (!msg || !msg.is_own || !msg.created_at) return null;
+      const createdMs = Date.parse(msg.created_at);
+      if (isNaN(createdMs)) return null;
+      let reader = null;
+      for (const uid of Object.keys(this.readReceipts)) {
+        const r = this.readReceipts[uid];
+        if (!r || !r.last_read_at) continue;
+        if (Date.parse(r.last_read_at) >= createdMs) {
+          reader = r.name || 'Read';
+          break;
+        }
+      }
+      return reader;
     },
 
     showError(msg) {

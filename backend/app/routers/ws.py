@@ -93,8 +93,27 @@ async def chat_websocket(
 
     await manager.connect(room_id, user_id, websocket)
 
+    # Seed the just-connected client with everyone's current last_read_at so
+    # it can paint "Read" indicators on historical messages without waiting
+    # for new read events.
+    for rp in room.participants:
+        if rp.last_read_at is not None:
+            await manager.send_to_user(
+                room_id,
+                user_id,
+                {
+                    "type": "read_receipt",
+                    "data": {
+                        "user_id": str(rp.user_id),
+                        "display_name": rp.user.display_name if rp.user else "",
+                        "last_read_at": rp.last_read_at.isoformat(),
+                        "message_id": None,
+                    },
+                },
+            )
+
     # Notify room of join
-    connections = manager.get_room_connections(room_id)
+    connections = list(manager.get_room_connections(room_id))
     for uid in connections:
         if uid != user_id:
             await manager.send_to_user(
@@ -113,6 +132,55 @@ async def chat_websocket(
         while True:
             raw = await websocket.receive_text()
             data = json.loads(raw)
+
+            if data.get("type") == "read":
+                # Client reports the user has read messages up to and including
+                # message_id. We persist this on the room_participants row and
+                # broadcast a read_receipt to the room so senders can show a
+                # Read indicator.
+                msg_id_str = data.get("message_id")
+                msg_created_at: datetime | None = None
+                if msg_id_str:
+                    try:
+                        msg_uuid = uuid.UUID(msg_id_str)
+                    except ValueError:
+                        continue
+                    async with async_session() as db:
+                        m = await db.execute(select(Message).where(Message.id == msg_uuid))
+                        m_obj = m.scalar_one_or_none()
+                        if m_obj is None or m_obj.room_id != room_id:
+                            continue
+                        msg_created_at = m_obj.created_at
+                        # Update this participant's last_read_at if later than current
+                        rp_result = await db.execute(
+                            select(RoomParticipant).where(
+                                RoomParticipant.room_id == room_id,
+                                RoomParticipant.user_id == user_id,
+                            )
+                        )
+                        rp = rp_result.scalar_one_or_none()
+                        if rp is not None and (
+                            rp.last_read_at is None or rp.last_read_at < msg_created_at
+                        ):
+                            rp.last_read_at = msg_created_at
+                            await db.commit()
+                if msg_created_at is None:
+                    continue
+                for uid in list(manager.get_room_connections(room_id)):
+                    await manager.send_to_user(
+                        room_id,
+                        uid,
+                        {
+                            "type": "read_receipt",
+                            "data": {
+                                "user_id": str(user_id),
+                                "display_name": user.display_name,
+                                "last_read_at": msg_created_at.isoformat(),
+                                "message_id": msg_id_str,
+                            },
+                        },
+                    )
+                continue
 
             if data.get("type") == "send_message":
                 if not _check_ws_rate_limit(user_id, room_id):
@@ -304,7 +372,7 @@ async def chat_websocket(
 
                     # Broadcast to all connections
                     now = msg.created_at.isoformat()
-                    for uid, ws in manager.get_room_connections(room_id).items():
+                    for uid, ws in list(manager.get_room_connections(room_id).items()):
                         if uid == user_id:
                             # Sender sees original
                             await manager.send_to_user(
@@ -407,7 +475,7 @@ async def chat_websocket(
     finally:
         manager.disconnect(room_id, user_id)
         # Notify room of leave
-        for uid in manager.get_room_connections(room_id):
+        for uid in list(manager.get_room_connections(room_id)):
             try:
                 await manager.send_to_user(
                     room_id,

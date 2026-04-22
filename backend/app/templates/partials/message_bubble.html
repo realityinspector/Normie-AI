@@ -32,10 +32,24 @@
           </template>
           <!-- Message text -->
           <p class="text-sm leading-relaxed break-words" x-text="msg.text"></p>
-          <!-- Timestamp -->
-          <p class="text-[10px] mt-1 text-right"
-             :class="msg.is_own ? 'text-indigo-300' : 'text-gray-400'"
-             x-text="msg.time"></p>
+          <!-- Timestamp + read indicator -->
+          <p class="text-[10px] mt-1 text-right flex items-center justify-end gap-1"
+             :class="msg.is_own ? 'text-indigo-300' : 'text-gray-400'">
+            <span x-text="msg.time"></span>
+            <template x-if="msg.is_own">
+              <span class="inline-flex items-center gap-0.5"
+                    :title="readerFor(msg) ? ('Read by ' + readerFor(msg)) : 'Sent'">
+                <!-- Single check = sent; double check = read -->
+                <svg x-show="!readerFor(msg)" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <svg x-show="readerFor(msg)" class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4 6-7" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M11 13l4 4L22 7" />
+                </svg>
+              </span>
+            </template>
+          </p>
         </div>
       </div>
       <!-- Preview: how this reads in the opposite style (only when alone in a room). -->

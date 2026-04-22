@@ -33,6 +33,9 @@ class RoomParticipant(Base):
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
+    last_read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     room = relationship("Room", back_populates="participants")
     user = relationship("User")
