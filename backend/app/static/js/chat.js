@@ -70,6 +70,9 @@ function chatApp(token, userId, displayName, initialRoomId) {
     // Last message id we've reported as read to the server, to avoid
     // spamming the socket with duplicate reads.
     lastSentReadMessageId: null,
+    // Users we've already shown a "joined" system message for in this room
+    // session — dedupes reconnects and the server's seed-join loop.
+    announcedJoiners: {},
 
     // WebSocket
     ws: null,
@@ -181,6 +184,7 @@ function chatApp(token, userId, displayName, initialRoomId) {
       this.messages = [];
       this.readReceipts = {};
       this.lastSentReadMessageId = null;
+      this.announcedJoiners = {};
       this.sidebarOpen = false;
 
       // Update URL without reload
@@ -384,7 +388,15 @@ function chatApp(token, userId, displayName, initialRoomId) {
 
         case 'user_joined': {
           const d = payload.data;
-          // Optionally show system message
+          // Dedupe: client reconnects cause multiple join events for the
+          // same user. Only show the system message once per room session.
+          if (d.user_id && this.announcedJoiners[d.user_id]) break;
+          if (d.user_id) this.announcedJoiners[d.user_id] = true;
+          // Bump participant count in the sidebar for the current room.
+          if (this.currentRoomId) {
+            const room = this.rooms.find(r => r.id === this.currentRoomId);
+            if (room) room.participant_count = (room.participant_count || 1) + 1;
+          }
           this.messages.push({
             id: 'sys-' + Date.now(),
             sender_id: null,
