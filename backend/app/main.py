@@ -127,7 +127,23 @@ app.add_middleware(
 )
 
 # --- Static files & templates ---
-app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+class _NoCacheStaticFiles(StaticFiles):
+    """Force revalidation for JS/CSS so cache-busted assets ship without stale tabs.
+
+    Why: app.js cache-bust query params don't help tabs already running an old
+    build — the browser keeps using the cached file until the page reloads. With
+    no-cache, the browser revalidates with If-Modified-Since on every request,
+    so a deploy that touches the file is picked up on the next navigation.
+    """
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if path.endswith((".js", ".css")):
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return response
+
+
+app.mount("/static", _NoCacheStaticFiles(directory=str(_STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
 
 # --- API routers ---
