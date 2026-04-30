@@ -336,17 +336,38 @@ function chatApp(token, userId, displayName, initialRoomId) {
             ? d.original_text
             : (d.translated_text || d.original_text);
 
-          this.messages.push({
-            id: d.id,
-            sender_id: d.sender_id,
-            sender_name: d.sender_name,
-            text: text,
-            is_own: isOwn,
-            time: this.formatTime(d.created_at),
-            created_at: d.created_at,
-            preview_text: null,
-            preview_style: null,
-          });
+          // If this is the server's echo of an optimistically-rendered own
+          // message, replace the pending stub in place instead of appending
+          // a duplicate. We match on first pending message with the same text.
+          let replaced = false;
+          if (isOwn) {
+            const pending = this.messages.find(m =>
+              m.pending && m.sender_id === this.userId && m.original_text === d.original_text
+            );
+            if (pending) {
+              pending.id = d.id;
+              pending.text = text;
+              pending.time = this.formatTime(d.created_at);
+              pending.created_at = d.created_at;
+              pending.pending = false;
+              pending.failed = false;
+              replaced = true;
+            }
+          }
+          if (!replaced) {
+            this.messages.push({
+              id: d.id,
+              sender_id: d.sender_id,
+              sender_name: d.sender_name,
+              text: text,
+              original_text: d.original_text,
+              is_own: isOwn,
+              time: this.formatTime(d.created_at),
+              created_at: d.created_at,
+              preview_text: null,
+              preview_style: null,
+            });
+          }
 
           this.$nextTick(() => this.scrollToBottom());
 
@@ -472,26 +493,85 @@ function chatApp(token, userId, displayName, initialRoomId) {
     sendMessage() {
       const text = this.messageInput.trim();
       if (!text) return;
+      this._sendText(text);
+    },
 
-      // Check WebSocket is connected and open
+    /**
+     * Send `text` over the WebSocket, optimistically rendering it locally
+     * and reconciling with the server echo. Handles the half-open-socket case
+     * where the proxy has killed the WS but the browser still thinks it's
+     * OPEN: ws.send() succeeds locally, the bytes vanish, no echo arrives.
+     * If we don't see an echo within 7s we mark the message as failed and
+     * force-reconnect so the next send uses a fresh socket.
+     */
+    _sendText(text) {
+      const tempId = 'tmp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+      const optimistic = {
+        id: tempId,
+        sender_id: this.userId,
+        sender_name: this.displayName || 'You',
+        text: text,
+        original_text: text,
+        is_own: true,
+        time: this.formatTime(new Date().toISOString()),
+        created_at: new Date().toISOString(),
+        preview_text: null,
+        preview_style: null,
+        pending: true,
+        failed: false,
+      };
+      this.messages.push(optimistic);
+      this.$nextTick(() => this.scrollToBottom());
+
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        this.showError('Not connected. Please wait for reconnection or click the banner to reconnect.');
-        // Keep the message in the input box — do NOT clear it
+        // Mark failed immediately and try to reconnect for retry.
+        optimistic.pending = false;
+        optimistic.failed = true;
+        this.showError('Not connected — message saved locally. Reconnecting…');
+        if (this.currentRoomId) {
+          this.disconnectWebSocket();
+          this.connectWebSocket();
+        }
+        this.messageInput = '';
         return;
       }
 
       try {
-        this.ws.send(JSON.stringify({
-          type: 'send_message',
-          text: text,
-        }));
+        this.ws.send(JSON.stringify({ type: 'send_message', text: text }));
         if (typeof track === 'function') track('message_sent', { room_id: this.currentRoomId });
-        // Only clear input on successful send
         this.messageInput = '';
       } catch (e) {
-        this.showError('Failed to send message. Please try again.');
-        // Keep the message in the input box
+        optimistic.pending = false;
+        optimistic.failed = true;
+        this.showError('Failed to send. Tap the message to retry.');
+        return;
       }
+
+      // Ack timeout: if the server echo never arrives, mark as failed and
+      // force-reconnect so a retry goes over a fresh socket.
+      setTimeout(() => {
+        const stillPending = this.messages.find(m => m.id === tempId && m.pending);
+        if (stillPending) {
+          stillPending.pending = false;
+          stillPending.failed = true;
+          this.showError('Message did not reach the server. Tap to retry.');
+          if (this.currentRoomId) {
+            this.disconnectWebSocket();
+            this.connectWebSocket();
+          }
+        }
+      }, 7000);
+    },
+
+    /**
+     * Retry sending a previously-failed own message.
+     */
+    retryMessage(msg) {
+      if (!msg || !msg.failed || !msg.original_text) return;
+      // Remove the failed stub, then re-send so it gets a fresh tempId
+      // and a new ack-timeout window.
+      this.messages = this.messages.filter(m => m.id !== msg.id);
+      this._sendText(msg.original_text);
     },
 
     handleTyping() {

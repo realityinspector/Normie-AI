@@ -23,9 +23,14 @@
     <div>
       <div class="flex" :class="msg.is_own ? 'justify-end' : 'justify-start'">
         <div class="max-w-[75%] rounded-2xl px-4 py-2 mb-1"
-             :class="msg.is_own
-               ? 'bg-indigo-600 text-white rounded-br-md'
-               : 'bg-gray-100 text-gray-900 rounded-bl-md'">
+             :class="[
+               msg.is_own
+                 ? 'bg-indigo-600 text-white rounded-br-md'
+                 : 'bg-gray-100 text-gray-900 rounded-bl-md',
+               msg.pending ? 'opacity-60' : '',
+               msg.failed ? 'ring-2 ring-red-300 cursor-pointer' : ''
+             ]"
+             @click="msg.failed && retryMessage(msg)">
           <!-- Sender name (others only) -->
           <template x-if="!msg.is_own">
             <p class="text-xs font-semibold mb-0.5" :class="msg.is_own ? 'text-indigo-200' : 'text-indigo-600'" x-text="msg.sender_name"></p>
@@ -36,10 +41,15 @@
           <p class="text-[10px] mt-1 text-right flex items-center justify-end gap-1"
              :class="msg.is_own ? 'text-indigo-300' : 'text-gray-400'">
             <span x-text="msg.time"></span>
-            <template x-if="msg.is_own">
+            <template x-if="msg.is_own && msg.failed">
+              <span class="text-[11px] leading-none font-semibold text-red-200" title="Tap to retry">⚠ failed — tap to retry</span>
+            </template>
+            <template x-if="msg.is_own && msg.pending && !msg.failed">
+              <span class="text-[11px] leading-none italic" title="Sending…">sending…</span>
+            </template>
+            <template x-if="msg.is_own && !msg.pending && !msg.failed">
               <span class="inline-flex items-center"
                     :title="readerFor(msg) ? ('Read by ' + readerFor(msg)) : 'Sent'">
-                <!-- Plain text checks are clearer than tiny SVGs at this size. -->
                 <span x-show="!readerFor(msg)" class="text-[11px] leading-none">✓</span>
                 <span x-show="readerFor(msg)" class="text-[11px] leading-none font-semibold text-white">✓✓</span>
               </span>
