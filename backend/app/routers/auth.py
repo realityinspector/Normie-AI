@@ -1,5 +1,4 @@
 import logging
-import secrets
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -14,20 +13,13 @@ from app.database import get_db
 from app.models.user import CommunicationStyle, User
 from app.schemas.auth import (
     AppleSignInRequest,
-    ForgotPasswordRequest,
     GoogleSignInRequest,
     LoginRequest,
-    ResetPasswordRequest,
     SignupRequest,
     TokenResponse,
 )
 from pydantic import BaseModel
 from app.services.apple_auth import verify_apple_identity_token
-from app.services.email_service import (
-    EmailNotConfigured,
-    EmailSendError,
-    send_password_reset,
-)
 
 logger = logging.getLogger("normalaizer")
 
@@ -401,95 +393,3 @@ async def logout(response: Response):
     return {"status": "ok"}
 
 
-# --- Password Reset ---
-
-
-@router.post("/forgot-password")
-async def forgot_password(
-    body: ForgotPasswordRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    """Generate a password reset token and email the reset URL."""
-    settings = get_settings()
-    client_ip = request.client.host if request.client else "unknown"
-    if not _check_rate_limit(client_ip):
-        logger.warning("Rate limit hit: endpoint=forgot-password ip=%s", client_ip)
-        raise HTTPException(
-            status_code=429, detail="Too many requests. Try again in a minute."
-        )
-
-    result = await db.execute(select(User).where(User.email == body.email))
-    user = result.scalar_one_or_none()
-
-    if user:
-        token = secrets.token_urlsafe(32)
-        user.password_reset_token = token
-        user.password_reset_expires = datetime.now(timezone.utc) + timedelta(hours=1)
-        await db.flush()
-
-        reset_url = f"{settings.base_url.rstrip('/')}/reset-password?token={token}"
-        try:
-            await send_password_reset(to=user.email, reset_url=reset_url)
-        except EmailNotConfigured:
-            # Refuse to silently drop the request — better to tell the user
-            # than to leave them waiting for an email that will never arrive.
-            logger.error("forgot-password called but email provider not configured")
-            raise HTTPException(
-                status_code=503,
-                detail="Password reset is temporarily unavailable. Please contact support.",
-            )
-        except EmailSendError:
-            logger.exception("forgot-password email send failed")
-            raise HTTPException(
-                status_code=503,
-                detail="Could not send reset email. Please try again shortly.",
-            )
-
-    # Always return the same response to prevent email enumeration
-    return {
-        "status": "ok",
-        "message": "If that email exists, a reset link has been sent.",
-    }
-
-
-@router.post("/reset-password")
-async def reset_password(
-    body: ResetPasswordRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    """Reset a user's password using a valid reset token."""
-    client_ip = request.client.host if request.client else "unknown"
-    if not _check_rate_limit(client_ip):
-        logger.warning("Rate limit hit: endpoint=reset-password ip=%s", client_ip)
-        raise HTTPException(
-            status_code=429, detail="Too many requests. Try again in a minute."
-        )
-
-    result = await db.execute(
-        select(User).where(User.password_reset_token == body.token)
-    )
-    user = result.scalar_one_or_none()
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired reset token.",
-        )
-
-    if (
-        not user.password_reset_expires
-        or user.password_reset_expires < datetime.now(timezone.utc)
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired reset token.",
-        )
-
-    user.password_hash = _hash_password(body.new_password)
-    user.password_reset_token = None
-    user.password_reset_expires = None
-    await db.flush()
-
-    return {"status": "ok"}

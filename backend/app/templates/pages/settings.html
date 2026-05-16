@@ -110,69 +110,6 @@
   <div class="border-t border-gray-100 mx-5"></div>
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <!-- Subscription Section                                               -->
-  <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <section class="px-5 py-6">
-    <h2 class="text-lg font-bold text-gray-900 mb-4">Subscription</h2>
-
-    {% if user.subscription_active %}
-      <!-- Active Subscription -->
-      <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl mb-4">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span class="text-sm font-semibold text-emerald-900">Active</span>
-        </div>
-        {% if user.subscription_expires_at %}
-          <p class="text-xs text-emerald-700">
-            Renews on {{ user.subscription_expires_at.strftime('%B %d, %Y') }}
-          </p>
-        {% endif %}
-      </div>
-
-      <button @click="openPortal()"
-              :disabled="portalLoading"
-              class="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition disabled:opacity-50">
-        <span x-show="!portalLoading">Manage Subscription</span>
-        <span x-show="portalLoading">Redirecting...</span>
-      </button>
-    {% else %}
-      <!-- No Active Subscription -->
-      <div class="p-4 bg-gray-50 border border-gray-200 rounded-xl mb-4">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="w-2 h-2 rounded-full bg-gray-400"></span>
-          <span class="text-sm font-semibold text-gray-700">No active subscription</span>
-        </div>
-        <p class="text-xs text-gray-500">
-          {% if user.communication_style.value == "autistic" %}
-            You have free unlimited access as a neurodivergent user.
-          {% else %}
-            Upgrade to Pro for unlimited translations and API access.
-          {% endif %}
-        </p>
-      </div>
-
-      {% if user.communication_style.value != "autistic" %}
-        <a href="/pricing"
-           class="block w-full text-center px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-sm shadow-md hover:bg-indigo-700 transition">
-          View Plans
-        </a>
-      {% endif %}
-
-      {% if user.stripe_customer_id %}
-        <button @click="openPortal()"
-                :disabled="portalLoading"
-                class="w-full mt-3 px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition disabled:opacity-50">
-          <span x-show="!portalLoading">Billing History</span>
-          <span x-show="portalLoading">Redirecting...</span>
-        </button>
-      {% endif %}
-    {% endif %}
-  </section>
-
-  <!-- Divider -->
-  <div class="border-t border-gray-100 mx-5"></div>
-
-  <!-- ═══════════════════════════════════════════════════════════════════ -->
   <!-- Referral Section                                                   -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <section class="px-5 py-6">
@@ -206,10 +143,6 @@
       </a>
       <a href="/developers" class="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
         <span class="text-sm font-medium text-gray-900">Developer API</span>
-        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-      </a>
-      <a href="/pricing" class="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
-        <span class="text-sm font-medium text-gray-900">Pricing</span>
         <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
       </a>
     </div>
@@ -291,32 +224,9 @@ function settingsPage() {
     },
 
     // General page state
-    portalLoading: false,
     loggingOut: false,
     copied: false,
     error: null,
-
-    async openPortal() {
-      this.portalLoading = true;
-      this.error = null;
-      try {
-        const resp = await fetch('/stripe/create-portal-session', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (resp.ok) {
-          const data = await resp.json();
-          window.location.href = data.url;
-        } else {
-          const err = await resp.json();
-          this.error = err.detail || 'Could not open billing portal.';
-        }
-      } catch (e) {
-        this.error = 'Network error. Please try again.';
-      }
-      this.portalLoading = false;
-    },
 
     async doLogout() {
       this.loggingOut = true;

@@ -27,8 +27,6 @@ from app.routers import (
     ws,
     pages,
     api_v1,
-    stripe_webhooks,
-    stripe_checkout,
 )
 # Resolve paths relative to this file
 _APP_DIR = pathlib.Path(__file__).resolve().parent
@@ -153,8 +151,6 @@ app.include_router(translate.router, prefix="/translate", tags=["translate"])
 app.include_router(transcripts.router, prefix="/transcripts", tags=["transcripts"])
 app.include_router(credits.router, prefix="/credits", tags=["credits"])
 app.include_router(ws.router, tags=["websocket"])
-app.include_router(stripe_webhooks.router, tags=["stripe"])
-app.include_router(stripe_checkout.router, prefix="/stripe", tags=["stripe"])
 app.include_router(api_v1.router, prefix="/api/v1", tags=["developer-api"])
 app.include_router(analytics.router, tags=["analytics"])
 
@@ -192,7 +188,6 @@ async def health_detailed(
 
     # Config checks
     checks["openrouter"] = {"configured": bool(settings.openrouter_api_key)}
-    checks["stripe"] = {"configured": bool(settings.stripe_secret_key)}
     checks["auth"] = {
         "jwt_secret_secure": len(settings.jwt_secret) >= 16
         and settings.jwt_secret != "change-me-in-production",

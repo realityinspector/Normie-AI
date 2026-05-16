@@ -245,7 +245,7 @@ async def chat_websocket(
                                     "type": "error",
                                     "data": {
                                         "error_type": "credit_exhausted",
-                                        "message": "You're out of free credits. Visit the pricing page to keep chatting.",
+                                        "message": "You're out of free credits. Contact support if you need more.",
                                     },
                                 },
                             )

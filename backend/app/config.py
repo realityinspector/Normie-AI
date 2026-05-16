@@ -17,17 +17,8 @@ class Settings(BaseSettings):
     base_url: str = "http://localhost:8000"
     # Set to "true" to enable /auth/dev endpoint (disable in production!)
     dev_auth_enabled: str = "false"
-    # Stripe
-    stripe_secret_key: str = ""
-    stripe_publishable_key: str = ""
-    stripe_webhook_secret: str = ""
-    stripe_monthly_price_id: str = ""
-    stripe_yearly_price_id: str = ""
     cors_origins: str = ""
     health_api_key: str = ""
-    # Email (Resend HTTP API)
-    resend_api_key: str = ""
-    resend_from_email: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

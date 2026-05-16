@@ -85,7 +85,6 @@ async def probe(base_url: str):
         for page, expected in [
             ("/", "NORMALAIZER"),
             ("/signup", "account"),
-            ("/pricing", "ricing"),
         ]:
             try:
                 r = await client.get(f"{base_url}{page}")

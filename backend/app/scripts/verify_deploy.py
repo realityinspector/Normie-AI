@@ -23,7 +23,6 @@ async def verify(base_url: str):
             ("/", 200, "NORMALAIZER", "Landing page"),
             ("/signup", 200, "account", "Signup page"),
             ("/login", 200, "Sign in", "Login page"),
-            ("/pricing", 200, "ricing", "Pricing page"),
         ]
 
         for path, expected_status, expected_text, name in checks:

@@ -459,7 +459,7 @@ function chatApp(token, userId, displayName, initialRoomId) {
               id: 'err-' + Date.now(),
               sender_id: null,
               sender_name: '',
-              text: errMessage + ' <a href="/pricing" class="underline font-semibold">Upgrade your plan</a>',
+              text: errMessage,
               is_own: false,
               time: this.formatTime(new Date().toISOString()),
               is_system: true,

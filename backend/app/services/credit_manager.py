@@ -30,7 +30,7 @@ async def check_access(db: AsyncSession, user: User) -> bool:
 
     raise HTTPException(
         status_code=status.HTTP_402_PAYMENT_REQUIRED,
-        detail="You're out of free credits. Visit the pricing page to continue chatting.",
+        detail="You're out of free credits. Contact support if you need more.",
     )
 
 
@@ -47,7 +47,7 @@ async def check_and_deduct(
     if user.credit_balance < amount:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail="You don't have enough credits. Visit the pricing page to continue.",
+            detail="You don't have enough credits. Contact support if you need more.",
         )
 
     user.credit_balance -= amount

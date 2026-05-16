@@ -90,21 +90,6 @@ async def signup_page(request: Request):
     )
 
 
-@router.get("/forgot-password", response_class=HTMLResponse)
-async def forgot_password_page(request: Request):
-    """Forgot password page with email form."""
-    return templates.TemplateResponse(request, "pages/forgot_password.html")
-
-
-@router.get("/reset-password", response_class=HTMLResponse)
-async def reset_password_page(request: Request):
-    """Reset password page with new password form."""
-    token = request.query_params.get("token", "")
-    return templates.TemplateResponse(
-        request, "pages/reset_password.html", {"token": token}
-    )
-
-
 @router.get("/translate", response_class=HTMLResponse)
 async def translate_page(request: Request):
     """Standalone text translation page. Requires auth — redirects to /login if no session."""
@@ -215,25 +200,6 @@ async def _get_user_by_id(user_id_str: str) -> User | None:
             return result.scalar_one_or_none()
     except Exception:
         return None
-
-
-# ---------------------------------------------------------------------------
-# Pricing page (public)
-# ---------------------------------------------------------------------------
-
-
-@router.get("/pricing", response_class=HTMLResponse)
-async def pricing_page(request: Request):
-    """Subscription pricing page with plan selection and checkout."""
-    settings = get_settings()
-    return templates.TemplateResponse(
-        request,
-        "pages/pricing.html",
-        {
-            "monthly_price_id": settings.stripe_monthly_price_id,
-            "yearly_price_id": settings.stripe_yearly_price_id,
-        },
-    )
 
 
 # ---------------------------------------------------------------------------
