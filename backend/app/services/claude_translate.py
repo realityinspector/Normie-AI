@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 # OpenRouter base URL (OpenAI-compatible)
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
-MODEL = "anthropic/claude-sonnet-4"
+MODEL = "anthropic/claude-sonnet-4.6"
 
 # Retry configuration
 MAX_RETRIES = 3
