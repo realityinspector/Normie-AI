@@ -15,6 +15,12 @@ MAX_RETRIES = 3
 BACKOFF_SECONDS = [1, 2, 4]
 REQUEST_TIMEOUT = 30
 
+# Per-request output cap. Chat translations are short by design — under 150
+# tokens is fine for typical messages. Bump if your OpenRouter key budget
+# allows; the API rejects requests whose max_tokens exceeds remaining credit.
+TRANSLATE_MAX_TOKENS = 150
+OCR_MAX_TOKENS = 150
+
 # Translation system prompts
 PROMPTS = {
     (CommunicationStyle.neurotypical, CommunicationStyle.autistic): (
@@ -114,7 +120,7 @@ async def translate_text(
         response = _call_with_retries(
             client,
             model=MODEL,
-            max_tokens=1024,
+            max_tokens=TRANSLATE_MAX_TOKENS,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": text},
@@ -152,7 +158,7 @@ async def extract_and_translate_image(
         ocr_response = _call_with_retries(
             client,
             model=MODEL,
-            max_tokens=2048,
+            max_tokens=OCR_MAX_TOKENS,
             messages=[
                 {
                     "role": "user",
