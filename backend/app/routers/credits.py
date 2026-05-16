@@ -13,6 +13,8 @@ from app.schemas.credits import (
     RedeemReferralRequest,
 )
 from app.services.credit_manager import add_credits
+from app.services.apple_storekit import verify_jws, JWSVerificationError
+from app.config import get_settings
 from app.models.credit import TransactionType
 import logging
 
@@ -58,33 +60,39 @@ async def verify_purchase(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Verify a StoreKit 2 JWS transaction and extend subscription.
+    """Verify a StoreKit 2 JWS transaction and extend subscription."""
+    settings = get_settings()
 
-    In production, this should verify the JWS signature against Apple's
-    certificate chain. For now, we trust the client and just check for
-    replay attacks via the transaction ID.
-    """
-    # Check for replay (duplicate transaction)
+    try:
+        payload = verify_jws(body.jws_transaction, settings.apple_bundle_id)
+    except JWSVerificationError as exc:
+        logger.warning(
+            "Apple StoreKit JWS verification failed: user_id=%s reason=%s",
+            user.id,
+            exc,
+        )
+        raise HTTPException(status_code=400, detail="Invalid purchase receipt") from exc
+
+    # Trust the verified payload over the client-supplied product_id.
+    verified_product_id = payload.get("productId") or body.product_id
+    verified_transaction_id = str(
+        payload.get("transactionId") or body.jws_transaction
+    )
+
+    # Replay protection — by Apple-issued transaction ID, not JWS string.
     existing = await db.execute(
         select(CreditTransaction).where(
-            CreditTransaction.apple_transaction_id == body.jws_transaction
+            CreditTransaction.apple_transaction_id == verified_transaction_id
         )
     )
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Transaction already processed")
 
-    months = PRODUCT_MONTHS.get(body.product_id)
-    credit_amount = PRODUCT_CREDITS.get(body.product_id)
+    months = PRODUCT_MONTHS.get(verified_product_id)
+    credit_amount = PRODUCT_CREDITS.get(verified_product_id)
 
     if not months and not credit_amount:
         raise HTTPException(status_code=400, detail="Unknown product ID")
-
-    # ⚠️ MOCK: Apple StoreKit JWS signature is NOT verified
-    # This is NOT safe for production App Store purchases
-    # TODO: Implement proper JWS verification against Apple's certificate chain
-    logger.warning(
-        "MOCK: Apple StoreKit JWS signature NOT verified — do not use for real purchases"
-    )
 
     if months:
         # New subscription model: extend subscription
@@ -95,7 +103,7 @@ async def verify_purchase(
             user_id=user.id,
             amount=0,
             transaction_type=TransactionType.purchase,
-            apple_transaction_id=body.jws_transaction,
+            apple_transaction_id=verified_transaction_id,
             description=f"Subscription extended by {months} month(s)",
         )
         db.add(tx)
@@ -106,7 +114,7 @@ async def verify_purchase(
             user.id,
             credit_amount,
             TransactionType.purchase,
-            apple_transaction_id=body.jws_transaction,
+            apple_transaction_id=verified_transaction_id,
             description=f"Purchased {credit_amount} credits",
         )
 

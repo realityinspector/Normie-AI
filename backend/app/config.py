@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     stripe_yearly_price_id: str = ""
     cors_origins: str = ""
     health_api_key: str = ""
+    # Email (Resend HTTP API)
+    resend_api_key: str = ""
+    resend_from_email: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

@@ -23,6 +23,11 @@ from app.schemas.auth import (
 )
 from pydantic import BaseModel
 from app.services.apple_auth import verify_apple_identity_token
+from app.services.email_service import (
+    EmailNotConfigured,
+    EmailSendError,
+    send_password_reset,
+)
 
 logger = logging.getLogger("normalaizer")
 
@@ -405,7 +410,8 @@ async def forgot_password(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Generate a password reset token and log the reset URL."""
+    """Generate a password reset token and email the reset URL."""
+    settings = get_settings()
     client_ip = request.client.host if request.client else "unknown"
     if not _check_rate_limit(client_ip):
         logger.warning("Rate limit hit: endpoint=forgot-password ip=%s", client_ip)
@@ -421,7 +427,24 @@ async def forgot_password(
         user.password_reset_token = token
         user.password_reset_expires = datetime.now(timezone.utc) + timedelta(hours=1)
         await db.flush()
-        logger.info("Password reset link: /reset-password?token=%s", token)
+
+        reset_url = f"{settings.base_url.rstrip('/')}/reset-password?token={token}"
+        try:
+            await send_password_reset(to=user.email, reset_url=reset_url)
+        except EmailNotConfigured:
+            # Refuse to silently drop the request — better to tell the user
+            # than to leave them waiting for an email that will never arrive.
+            logger.error("forgot-password called but email provider not configured")
+            raise HTTPException(
+                status_code=503,
+                detail="Password reset is temporarily unavailable. Please contact support.",
+            )
+        except EmailSendError:
+            logger.exception("forgot-password email send failed")
+            raise HTTPException(
+                status_code=503,
+                detail="Could not send reset email. Please try again shortly.",
+            )
 
     # Always return the same response to prevent email enumeration
     return {

@@ -30,8 +30,6 @@ from app.routers import (
     stripe_webhooks,
     stripe_checkout,
 )
-from app.routers.integrations import router as integrations_router
-
 # Resolve paths relative to this file
 _APP_DIR = pathlib.Path(__file__).resolve().parent
 _STATIC_DIR = _APP_DIR / "static"
@@ -158,7 +156,6 @@ app.include_router(ws.router, tags=["websocket"])
 app.include_router(stripe_webhooks.router, tags=["stripe"])
 app.include_router(stripe_checkout.router, prefix="/stripe", tags=["stripe"])
 app.include_router(api_v1.router, prefix="/api/v1", tags=["developer-api"])
-app.include_router(integrations_router, prefix="/integrations", tags=["integrations"])
 app.include_router(analytics.router, tags=["analytics"])
 
 # --- Pages (HTML) router — mounted last, no prefix, so / serves the landing page ---
