@@ -61,13 +61,21 @@ if [ "$TEST_ONLY" -eq 1 ]; then
   exit 0
 fi
 
-echo "==> Archiving for Generic iOS Device"
+if [ -z "${DEVELOPMENT_TEAM:-}" ]; then
+  echo "DEVELOPMENT_TEAM env var not set — required for archive signing." >&2
+  echo "Find your Team ID at https://developer.apple.com/account → Membership." >&2
+  echo "Then re-run: DEVELOPMENT_TEAM=ABC1234567 scripts/build-testflight.sh" >&2
+  exit 1
+fi
+
+echo "==> Archiving for Generic iOS Device (team $DEVELOPMENT_TEAM)"
 xcodebuild archive \
   -project "$PROJECT" \
   -scheme "$SCHEME" \
   -configuration Release \
   -destination "generic/platform=iOS" \
   -archivePath "$ARCHIVE_PATH" \
+  DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
   | tee "$BUILD_DIR/archive.log" \
   | xcpretty 2>/dev/null || true
 
@@ -76,14 +84,14 @@ if [ ! -d "$ARCHIVE_PATH" ]; then
   exit 1
 fi
 
-# Minimal export options — App Store distribution, automatic signing.
-cat >"$EXPORT_OPTIONS" <<'PLIST'
+cat >"$EXPORT_OPTIONS" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>method</key><string>app-store</string>
   <key>signingStyle</key><string>automatic</string>
+  <key>teamID</key><string>$DEVELOPMENT_TEAM</string>
   <key>uploadBitcode</key><false/>
   <key>uploadSymbols</key><true/>
 </dict>

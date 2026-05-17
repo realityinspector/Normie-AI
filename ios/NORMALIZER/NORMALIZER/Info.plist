@@ -6,5 +6,11 @@
 	<string>NORMALIZER needs access to your photos to translate screenshots.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>NORMALIZER needs camera access to take screenshots for translation.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>CFBundleDisplayName</key>
+	<string>Normalaizer</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.social-networking</string>
 </dict>
 </plist>
